@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.generics import RetrieveUpdateAPIView, ListAPIView, CreateAPIView
+from rest_framework import filters
 
 from .serializers import SuperUserSerializer
 from .models import Profile
@@ -30,6 +31,9 @@ class ProfileDetailView(RetrieveUpdateAPIView):
 class BusinessProfileListView(ListAPIView):
     serializer_class = None  # Wird dynamisch gesetzt
     permission_classes = [IsAuthenticated]
+    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
+    ordering_fields = ['username', 'location', 'created_at']
+    search_fields = ['username', 'location', 'first_name', 'last_name']
 
     def get_queryset(self):
         return Profile.objects.filter(type='business')
@@ -41,6 +45,9 @@ class BusinessProfileListView(ListAPIView):
 class CustomerProfileListView(ListAPIView):
     serializer_class = None  # Wird dynamisch gesetzt
     permission_classes = [IsAuthenticated]
+    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
+    ordering_fields = ['username', 'location', 'created_at']
+    search_fields = ['username', 'location', 'first_name', 'last_name']
 
     def get_queryset(self):
         return Profile.objects.filter(type='customer')
