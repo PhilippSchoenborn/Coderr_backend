@@ -24,3 +24,24 @@ class Profile(models.Model):
 
     def __str__(self):
         return self.username
+
+class Offer(models.Model):
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True, default='')
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Jetzt optional
+    image = models.ImageField(upload_to='offers/', blank=True, null=True)  # Bildfeld für Angebote
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='offers')
+
+    def __str__(self):
+        return self.title
+
+class Order(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='orders')
+    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='orders')
+    created_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=50, default='pending')
+
+    def __str__(self):
+        return f"Order {self.id} by {self.user.username} for {self.offer.title}"
