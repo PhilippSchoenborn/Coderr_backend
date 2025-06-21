@@ -13,7 +13,7 @@ class Profile(models.Model):
     username = models.CharField(max_length=150)
     first_name = models.CharField(max_length=150, blank=True, default='')
     last_name = models.CharField(max_length=150, blank=True, default='')
-    file = models.CharField(max_length=255, blank=True, default='')  # Profile picture filename
+    file = models.ImageField(upload_to='profiles/', blank=True, null=True)  # Profile picture
     location = models.CharField(max_length=255, blank=True, default='')
     tel = models.CharField(max_length=50, blank=True, default='')
     description = models.TextField(blank=True, default='')
