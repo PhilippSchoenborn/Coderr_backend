@@ -12,7 +12,7 @@ from rest_framework.authentication import BasicAuthentication
 from rest_framework import parsers
 
 from .serializers import (
-    SuperUserSerializer, RegistrationSerializer, LoginSerializer, ProfileSerializer, OfferSerializer
+    SuperUserSerializer, RegistrationSerializer, LoginSerializer, ProfileSerializer, OfferSerializer, OrderSerializer, ReviewSerializer
 )
 from .models import Profile, Offer, Order
 
@@ -36,7 +36,7 @@ class ProfileDetailView(RetrieveUpdateAPIView):
 
 class BusinessProfileListView(ListAPIView):
     serializer_class = None  # Wird dynamisch gesetzt
-    permission_classes = [AllowAny]  # Offen für alle, damit das Frontend immer ein Array bekommt
+    permission_classes = [IsAuthenticated]  # Authentifizierung erforderlich
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
     ordering_fields = ['username', 'location', 'created_at']
     search_fields = ['username', 'location', 'first_name', 'last_name']
@@ -56,7 +56,7 @@ class BusinessProfileListView(ListAPIView):
 
 class CustomerProfileListView(ListAPIView):
     serializer_class = None  # Wird dynamisch gesetzt
-    permission_classes = [AllowAny]  # Offen für alle, damit das Frontend immer ein Array bekommt
+    permission_classes = [IsAuthenticated]  # Authentifizierung erforderlich
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
     ordering_fields = ['username', 'location', 'created_at']
     search_fields = ['username', 'location', 'first_name', 'last_name']
@@ -94,7 +94,18 @@ class LoginView(APIView):
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
-            user = authenticate(username=serializer.validated_data['username'], password=serializer.validated_data['password'])
+            username_or_email = serializer.validated_data.get('username')
+            password = serializer.validated_data['password']
+            # Prüfe, ob username wie eine E-Mail aussieht
+            if '@' in username_or_email:
+                try:
+                    user_obj = User.objects.get(email=username_or_email)
+                    username = user_obj.username
+                except User.DoesNotExist:
+                    return Response({'detail': 'Invalid credentials'}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                username = username_or_email
+            user = authenticate(username=username, password=password)
             if user:
                 token, _ = Token.objects.get_or_create(user=user)
                 return Response({
@@ -140,6 +151,12 @@ class OfferListCreateView(ListCreateAPIView):
     permission_classes = [AllowAny]
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
 
+    def create(self, request, *args, **kwargs):
+        print("Offer POST data:", dict(request.data))
+        response = super().create(request, *args, **kwargs)
+        print("Offer created response:", response.data)
+        return response
+
 class OfferDetailView(RetrieveUpdateDestroyAPIView):
     queryset = Offer.objects.all()
     serializer_class = OfferSerializer
@@ -173,3 +190,60 @@ class OfferDetailDummyView(APIView):
             'offer_type': t[0],
             'offer': offer_id,
         }, status=status.HTTP_200_OK)
+
+class OrdersListCreateView(ListCreateAPIView):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    permission_classes = [AllowAny]
+    pagination_class = None  # Pagination deaktiviert, gibt immer ein Array zurück
+
+class OrderDetailView(RetrieveUpdateDestroyAPIView):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    permission_classes = [AllowAny]
+
+# Dummy in-memory review list for demonstration
+REVIEWS = []
+
+class ReviewsListCreateView(APIView):
+    permission_classes = [AllowAny]
+    def get(self, request):
+        return Response(REVIEWS, status=status.HTTP_200_OK)
+    def post(self, request):
+        serializer = ReviewSerializer(data=request.data)
+        if serializer.is_valid():
+            # Prevent duplicate reviews by same reviewer for same business_user
+            business_user = serializer.validated_data.get('business_user')
+            reviewer = serializer.validated_data.get('reviewer')
+            for review in REVIEWS:
+                if review['business_user'] == business_user and review['reviewer'] == reviewer:
+                    return Response({'detail': 'Duplicate review not allowed.'}, status=status.HTTP_400_BAD_REQUEST)
+            review = serializer.data
+            review['id'] = len(REVIEWS) + 1
+            REVIEWS.append(review)
+            return Response(review, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ReviewDetailView(APIView):
+    permission_classes = [AllowAny]
+    def get(self, request, pk):
+        review = next((r for r in REVIEWS if r['id'] == pk), None)
+        if review:
+            return Response(review, status=status.HTTP_200_OK)
+        return Response({'detail': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+    def patch(self, request, pk):
+        review = next((r for r in REVIEWS if r['id'] == pk), None)
+        if not review:
+            return Response({'detail': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = ReviewSerializer(review, data=request.data, partial=True)
+        if serializer.is_valid():
+            review.update(serializer.validated_data)
+            return Response(review, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def delete(self, request, pk):
+        global REVIEWS
+        before = len(REVIEWS)
+        REVIEWS = [r for r in REVIEWS if r['id'] != pk]
+        if len(REVIEWS) < before:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({'detail': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
