@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import Profile, Offer
+from .models import Profile, Offer, Order
 from rest_framework.authtoken.models import Token
 import base64
 from django.core.files.base import ContentFile
@@ -41,7 +41,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     type = serializers.CharField(required=True)
     first_name = serializers.CharField(required=False, allow_blank=True, default='')
     last_name = serializers.CharField(required=False, allow_blank=True, default='')
-    file = serializers.CharField(required=False, allow_blank=True, default='')
+    file = serializers.ImageField(required=False, allow_null=True)
     location = serializers.CharField(required=False, allow_blank=True, default='')
     tel = serializers.CharField(required=False, allow_blank=True, default='')
     description = serializers.CharField(required=False, allow_blank=True, default='')
@@ -62,6 +62,20 @@ class ProfileSerializer(serializers.ModelSerializer):
             if data.get(field) is None:
                 data[field] = ''
         return data
+
+    def update(self, instance, validated_data):
+        # User-Felder extrahieren und separat speichern
+        user_data = validated_data.pop('user', {})
+        if 'username' in user_data:
+            instance.user.username = user_data['username']
+        if 'email' in user_data:
+            instance.user.email = user_data['email']
+        instance.user.save()
+        # Restliche Profile-Felder wie gewohnt speichern
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
 
 class RegistrationSerializer(serializers.ModelSerializer):
     repeated_password = serializers.CharField(write_only=True, required=True)
@@ -99,7 +113,7 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
 class OfferSerializer(serializers.ModelSerializer):
-    owner = serializers.CharField(source='owner.username', read_only=True)
+    owner = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
     user = serializers.PrimaryKeyRelatedField(source='owner', read_only=True)
     image = serializers.ImageField(required=False, allow_null=True)
     image_base64 = serializers.CharField(write_only=True, required=False, allow_blank=True)
@@ -116,10 +130,20 @@ class OfferSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        if data.get('image') is None:
+        # Bild-URL korrekt setzen
+        if data.get('image') and hasattr(instance, 'image') and instance.image:
+            request = self.context.get('request', None)
+            if request is not None:
+                data['image'] = request.build_absolute_uri(instance.image.url)
+            else:
+                data['image'] = instance.image.url
+        else:
             data['image'] = ''
-        # Dummy-Details für Kompatibilität mit Frontend
-        if 'details' not in data or not isinstance(data['details'], list) or len(data['details']) == 0:
+        # Details: Wenn vorhanden, übernehme sie, sonst Dummy-Details
+        details_from_instance = getattr(instance, '_api_details', None)
+        if details_from_instance:
+            data['details'] = details_from_instance
+        if not data.get('details') or not isinstance(data['details'], list) or len(data['details']) == 0:
             offer_id = data.get('id', 0)
             data['details'] = [
                 {
@@ -150,7 +174,26 @@ class OfferSerializer(serializers.ModelSerializer):
                     'offer_type': 'premium',
                 },
             ]
+        # Extrahiere für Kompatibilität die wichtigsten Werte aus dem ersten Detail
+        if data['details'] and isinstance(data['details'], list):
+            first_detail = data['details'][0]
+            data['delivery_time_in_days'] = first_detail.get('delivery_time_in_days')
+            data['price'] = first_detail.get('price')
         data.pop('image_base64', None)
+        # Debug-Ausgabe: Rohdaten des Objekts
+        data['__debug__'] = {
+            'raw_instance': {
+                'id': getattr(instance, 'id', None),
+                'title': getattr(instance, 'title', None),
+                'description': getattr(instance, 'description', None),
+                'image': str(getattr(instance, 'image', None)),
+                'price': str(getattr(instance, 'price', None)),
+                'created_at': str(getattr(instance, 'created_at', None)),
+                'updated_at': str(getattr(instance, 'updated_at', None)),
+                # ggf. weitere Felder
+            },
+            'raw_data': data.copy()
+        }
         return data
 
     def validate_price(self, value):
@@ -163,13 +206,81 @@ class OfferSerializer(serializers.ModelSerializer):
         except (InvalidOperation, ValueError):
             raise serializers.ValidationError('Ungültiger Preis.')
 
+    def validate(self, data):
+        import json
+        details = data.get('details')
+        if isinstance(details, str):
+            try:
+                details = json.loads(details)
+                data['details'] = details
+            except Exception:
+                raise serializers.ValidationError('Details must be a valid JSON array.')
+        if details is None and hasattr(self, 'initial_data'):
+            details = self.initial_data.get('details')
+            if isinstance(details, str):
+                try:
+                    details = json.loads(details)
+                    data['details'] = details
+                except Exception:
+                    raise serializers.ValidationError('Details must be a valid JSON array.')
+        if details is None or not isinstance(details, list) or len(details) < 3:
+            raise serializers.ValidationError('An offer must contain at least 3 details.')
+        for detail in details:
+            if not isinstance(detail, dict):
+                raise serializers.ValidationError('Each detail must be an object.')
+            # Typprüfung für jedes Feld
+            # --- PATCH: Versuche, revisions und delivery_time_in_days in int zu casten ---
+            for int_field in ['revisions', 'delivery_time_in_days']:
+                if int_field in detail and not isinstance(detail[int_field], int):
+                    try:
+                        detail[int_field] = int(detail[int_field])
+                    except (ValueError, TypeError):
+                        raise serializers.ValidationError(f"Detail {int_field} must be an integer.")
+            # --- PATCH: Versuche, price in float zu casten ---
+            if 'price' in detail and not isinstance(detail['price'], (int, float, type(None))):
+                try:
+                    detail['price'] = float(detail['price'])
+                except (ValueError, TypeError):
+                    raise serializers.ValidationError('Detail price must be a number.')
+            if not isinstance(detail.get('title'), str):
+                raise serializers.ValidationError('Detail title must be a string.')
+            if not isinstance(detail.get('revisions'), int):
+                raise serializers.ValidationError('Detail revisions must be an integer.')
+            if not isinstance(detail.get('delivery_time_in_days'), int):
+                raise serializers.ValidationError('Detail delivery_time_in_days must be an integer.')
+            if not (isinstance(detail.get('price'), (int, float, type(None)))):
+                raise serializers.ValidationError('Detail price must be a number.')
+            if not isinstance(detail.get('features'), list):
+                raise serializers.ValidationError('Detail features must be a list.')
+            if not isinstance(detail.get('offer_type'), str):
+                raise serializers.ValidationError('Detail offer_type must be a string.')
+            for field in ['title', 'revisions', 'delivery_time_in_days', 'price', 'features', 'offer_type']:
+                if field not in detail:
+                    raise serializers.ValidationError(f"Each detail must include '{field}'.")
+        # Accept empty string or None for optional fields
+        if 'description' in data and (data['description'] is None or data['description'] == ''):
+            data['description'] = ''
+        return data
+
     def create(self, validated_data):
         image_base64 = validated_data.pop('image_base64', None)
         image = validated_data.pop('image', None)
-        # Setze den aktuellen User als owner
+        details = validated_data.pop('details', None)  # Details entfernen
         request = self.context.get('request')
-        if request and hasattr(request, 'user') and request.user and request.user.is_authenticated:
-            validated_data['owner'] = request.user
+        # Prüfe, ob owner explizit übergeben wurde (z.B. als ID)
+        owner = validated_data.get('owner', None)
+        if owner and not isinstance(owner, User):
+            try:
+                owner_obj = User.objects.get(pk=owner)
+                validated_data['owner'] = owner_obj
+            except User.DoesNotExist:
+                raise serializers.ValidationError({'owner': 'User does not exist.'})
+        elif not owner:
+            # Setze den aktuellen User als owner, falls nicht explizit übergeben
+            if request and hasattr(request, 'user') and request.user and request.user.is_authenticated:
+                validated_data['owner'] = request.user
+            else:
+                raise serializers.ValidationError({'owner': 'Owner must be provided or authenticated.'})
         offer = Offer.objects.create(**validated_data)
         if image:
             offer.image = image
@@ -180,6 +291,8 @@ class OfferSerializer(serializers.ModelSerializer):
             file_name = f"offer_{offer.id}.{ext}"
             offer.image = ContentFile(base64.b64decode(imgstr), name=file_name)
             offer.save()
+        # Details werden nicht gespeichert, aber für die API-Antwort genutzt
+        offer._api_details = details
         return offer
 
     def update(self, instance, validated_data):
@@ -196,3 +309,33 @@ class OfferSerializer(serializers.ModelSerializer):
             instance.image = ContentFile(base64.b64decode(imgstr), name=file_name)
         instance.save()
         return instance
+
+class OrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Order
+        fields = ['id', 'user', 'offer', 'created_at', 'status']
+        read_only_fields = ['id', 'created_at']
+
+    def create(self, validated_data):
+        # Set the user from the request context
+        request = self.context.get('request')
+        if request and hasattr(request, 'user') and request.user.is_authenticated:
+            validated_data['user'] = request.user
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        # Only allow status to be updated
+        if 'status' in validated_data:
+            instance.status = validated_data['status']
+            instance.save()
+        return instance
+
+# Dummy Review model/serializer for demonstration (replace with real model if available)
+class ReviewSerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
+    business_user = serializers.IntegerField()
+    reviewer = serializers.IntegerField()
+    rating = serializers.IntegerField()
+    description = serializers.CharField()
+    created_at = serializers.DateTimeField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
