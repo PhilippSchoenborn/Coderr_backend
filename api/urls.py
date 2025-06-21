@@ -9,8 +9,10 @@ from .views import (
     LoginView,
     BaseInfoView,
     PublicProfileListView,
-    ReviewsListView,
-    OrdersListView,
+    ReviewsListCreateView,  # changed
+    ReviewDetailView,       # new
+    OrdersListCreateView,   # changed
+    OrderDetailView,        # new
     OfferListCreateView,
     OfferDetailView,
     OrderCountView,
@@ -23,8 +25,10 @@ urlpatterns = [
     path('login/', LoginView.as_view(), name='login'),
     path('base-info/', BaseInfoView.as_view(), name='base-info'),
     path('profiles/', PublicProfileListView.as_view(), name='public-profiles'),
-    path('reviews/', ReviewsListView.as_view(), name='reviews-list'),
-    path('orders/', OrdersListView.as_view(), name='orders-list'),
+    path('reviews/', ReviewsListCreateView.as_view(), name='reviews-list'),
+    path('reviews/<int:pk>/', ReviewDetailView.as_view(), name='review-detail'),
+    path('orders/', OrdersListCreateView.as_view(), name='orders-list'),
+    path('orders/<int:pk>/', OrderDetailView.as_view(), name='order-detail'),
     path('profile/<int:pk>/', ProfileDetailView.as_view(), name='profile-detail'),
     path('profiles/business/', BusinessProfileListView.as_view(), name='business-profiles'),
     path('profiles/customer/', CustomerProfileListView.as_view(), name='customer-profiles'),
@@ -33,4 +37,5 @@ urlpatterns = [
     path('offerdetails/<int:pk>/', OfferDetailDummyView.as_view(), name='offerdetails-detail'),
     path('order-count/<int:user_id>/', OrderCountView.as_view(), name='order-count'),
     path('api/order-count/<int:user_id>/', OrderCountView.as_view(), name='order-count-api'),
+    path('superuser-registration/', SuperUserCreateView.as_view(), name='superuser-registration'),
 ]
