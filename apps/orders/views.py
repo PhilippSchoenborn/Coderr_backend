@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.generics import ListCreateAPIView
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from .models import Order
 from apps.profiles.models import Profile
 from apps.offers.models import Offer, OfferDetail
@@ -21,6 +21,19 @@ class CompletedOrderCountView(APIView):
         return Response({'completed_order_count': completed_order_count}, status=status.HTTP_200_OK)
 
 class InProgressOrderCountView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request, business_user_id):
+        if not request.user or not request.user.is_authenticated:
+            return Response({'detail': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
+        try:
+            business_profile = Profile.objects.get(user_id=business_user_id, type='business')
+        except Profile.DoesNotExist:
+            return Response({'detail': 'Business user not found.'}, status=status.HTTP_404_NOT_FOUND)
+        order_count = Order.objects.filter(offer__owner=business_user_id, status='in_progress').count()
+        return Response({'order_count': order_count}, status=status.HTTP_200_OK)
+
+class OrderCountView(APIView):
+    """Combined view for order count (in-progress orders)"""
     permission_classes = [IsAuthenticated]
     def get(self, request, business_user_id):
         if not request.user or not request.user.is_authenticated:
@@ -87,3 +100,17 @@ class OrdersListCreateView(ListCreateAPIView):
         except Exception:
             return Response({'detail': 'Internal server error.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+class OrderDetailView(RetrieveUpdateDestroyAPIView):
+    """Detail view for individual order operations (PATCH/DELETE)"""
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        order = super().get_object()
+        # Check permissions - only order owner or business owner can access
+        if self.request.user != order.user and (not hasattr(order, 'offer') or self.request.user != order.offer.owner):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You do not have permission to access this order.")
+        return order
