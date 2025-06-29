@@ -24,9 +24,13 @@ urlpatterns = [
     
     # App URLs
     path('api/profiles/', include('apps.profiles.urls')),
+    path('api/profile/', include('apps.profiles.urls')),  # Zusätzlich für Frontend-Kompatibilität
     path('api/offers/', include('apps.offers.urls')),
+    path('api/offer/', include('apps.offers.urls')),      # Zusätzlich für Frontend-Kompatibilität
     path('api/orders/', include('apps.orders.urls')),
+    path('api/order/', include('apps.orders.urls')),      # Zusätzlich für Frontend-Kompatibilität
     path('api/reviews/', include('apps.reviews.urls')),
+    path('api/review/', include('apps.reviews.urls')),    # Zusätzlich für Frontend-Kompatibilität
     path('api/', include('core.urls')),
 ]
 
