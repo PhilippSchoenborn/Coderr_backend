@@ -9,9 +9,12 @@ from .models import Offer, OfferDetail
 from apps.profiles.models import Profile
 from .serializers import OfferSerializer
 from core.permissions import IsOwnerOrReadOnly
+from .business_logic import OfferBusinessLogic
+
 
 class OfferListPagination(PageNumberPagination):
     page_size_query_param = 'page_size'
+
 
 class OfferListCreateView(ListCreateAPIView):
     queryset = Offer.objects.all()
@@ -24,67 +27,28 @@ class OfferListCreateView(ListCreateAPIView):
         return [AllowAny()]
 
     def post(self, request, *args, **kwargs):
-        if not request.user or not request.user.is_authenticated:
-            return Response({'detail': 'Authentifizierung erforderlich.'}, status=status.HTTP_401_UNAUTHORIZED)
-        try:
-            profile = Profile.objects.get(user=request.user)
-        except Profile.DoesNotExist:
-            return Response({'detail': 'Kein Profil gefunden.'}, status=status.HTTP_401_UNAUTHORIZED)
-        if profile.type != 'business':
-            return Response({'detail': 'Nur Business-Profile dürfen Angebote erstellen.'}, status=status.HTTP_403_FORBIDDEN)
+        """Create a new offer with business logic validation"""
+        # Validate user permissions
+        permission_error = OfferBusinessLogic.validate_user_permissions(request.user)
+        if permission_error:
+            return permission_error
+        
+        # Validate offer data
         data = request.data.copy()
-        # Pflichtfelder prüfen
-        if not data.get('title') or not isinstance(data.get('title'), str) or not data['title'].strip():
-            return Response({'detail': 'Titel muss angegeben werden.'}, status=status.HTTP_400_BAD_REQUEST)
-        if not data.get('description') or not isinstance(data.get('description'), str) or not data['description'].strip():
-            return Response({'detail': 'Beschreibung muss angegeben werden.'}, status=status.HTTP_400_BAD_REQUEST)
-        details_data = data.get('details')
-        if not details_data or not isinstance(details_data, list) or len(details_data) != 3:
-            return Response({'detail': 'Es müssen genau 3 Angebotsdetails übergeben werden.'}, status=status.HTTP_400_BAD_REQUEST)
-        for detail in details_data:
-            required_fields = ['title', 'revisions', 'delivery_time_in_days', 'price', 'features', 'offer_type']
-            for f in required_fields:
-                if f not in detail or detail[f] in [None, '', []]:
-                    return Response({'detail': f'Feld "{f}" in Angebotsdetails fehlt oder ist leer.'}, status=status.HTTP_400_BAD_REQUEST)
+        validation_error = OfferBusinessLogic.validate_offer_data(data)
+        if validation_error:
+            return validation_error
+        
+        # Create offer with details
         try:
-            offer = Offer.objects.create(
-                owner=request.user,
-                title=data.get('title'),
-                file=data.get('image'),
-                description=data.get('description'),
-            )
-            details_objs = []
-            for detail in details_data:
-                od = OfferDetail.objects.create(
-                    offer=offer,
-                    title=detail['title'],
-                    revisions=detail['revisions'],
-                    delivery_time_in_days=detail['delivery_time_in_days'],
-                    price=detail['price'],
-                    features=detail['features'],
-                    offer_type=detail['offer_type'],
-                )
-                details_objs.append(od)
-            offer_data = {
-                'id': offer.id,
-                'title': offer.title,
-                'image': offer.file.url if offer.file else None,
-                'description': offer.description,
-                'details': [
-                    {
-                        'id': d.id,
-                        'title': d.title,
-                        'revisions': d.revisions,
-                        'delivery_time_in_days': d.delivery_time_in_days,
-                        'price': d.price,
-                        'features': d.features,
-                        'offer_type': d.offer_type,
-                    } for d in details_objs
-                ]
-            }
+            offer, details_objs = OfferBusinessLogic.create_offer_with_details(request.user, data)
+            offer_data = OfferBusinessLogic.format_offer_response(offer, details_objs)
             return Response(offer_data, status=status.HTTP_201_CREATED)
         except Exception:
-            return Response({'detail': 'Interner Serverfehler.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {'detail': 'Interner Serverfehler.'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     def create(self, request, *args, **kwargs):
         return self._prepare_offer_creation(request, *args, **kwargs)

@@ -3,47 +3,56 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from rest_framework.exceptions import PermissionDenied
 from .models import Order
-from apps.profiles.models import Profile
-from apps.offers.models import Offer, OfferDetail
 from .serializers import OrderSerializer
+from .business_logic import OrderBusinessLogic
 
 class CompletedOrderCountView(APIView):
     permission_classes = [IsAuthenticated]
+    
     def get(self, request, business_user_id):
         if not request.user or not request.user.is_authenticated:
             return Response({'detail': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
-        try:
-            business_profile = Profile.objects.get(user_id=business_user_id, type='business')
-        except Profile.DoesNotExist:
-            return Response({'detail': 'Business user not found.'}, status=status.HTTP_404_NOT_FOUND)
-        completed_order_count = Order.objects.filter(offer__owner=business_user_id, status='completed').count()
-        return Response({'completed_order_count': completed_order_count}, status=status.HTTP_200_OK)
+        
+        count, error = OrderBusinessLogic.get_order_count_for_business(
+            business_user_id, 'completed'
+        )
+        if error:
+            return Response({'detail': error}, status=status.HTTP_404_NOT_FOUND)
+        
+        return Response({'completed_order_count': count}, status=status.HTTP_200_OK)
 
 class InProgressOrderCountView(APIView):
     permission_classes = [IsAuthenticated]
+    
     def get(self, request, business_user_id):
         if not request.user or not request.user.is_authenticated:
             return Response({'detail': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
-        try:
-            business_profile = Profile.objects.get(user_id=business_user_id, type='business')
-        except Profile.DoesNotExist:
-            return Response({'detail': 'Business user not found.'}, status=status.HTTP_404_NOT_FOUND)
-        order_count = Order.objects.filter(offer__owner=business_user_id, status='in_progress').count()
-        return Response({'order_count': order_count}, status=status.HTTP_200_OK)
+        
+        count, error = OrderBusinessLogic.get_order_count_for_business(
+            business_user_id, 'in_progress'
+        )
+        if error:
+            return Response({'detail': error}, status=status.HTTP_404_NOT_FOUND)
+        
+        return Response({'order_count': count}, status=status.HTTP_200_OK)
 
 class OrderCountView(APIView):
     """Combined view for order count (in-progress orders)"""
     permission_classes = [IsAuthenticated]
+    
     def get(self, request, business_user_id):
         if not request.user or not request.user.is_authenticated:
             return Response({'detail': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
-        try:
-            business_profile = Profile.objects.get(user_id=business_user_id, type='business')
-        except Profile.DoesNotExist:
-            return Response({'detail': 'Business user not found.'}, status=status.HTTP_404_NOT_FOUND)
-        order_count = Order.objects.filter(offer__owner=business_user_id, status='in_progress').count()
-        return Response({'order_count': order_count}, status=status.HTTP_200_OK)
+        
+        count, error = OrderBusinessLogic.get_order_count_for_business(
+            business_user_id, 'in_progress'
+        )
+        if error:
+            return Response({'detail': error}, status=status.HTTP_404_NOT_FOUND)
+        
+        return Response({'order_count': count}, status=status.HTTP_200_OK)
 
 class OrdersListCreateView(ListCreateAPIView):
     queryset = Order.objects.all()
@@ -54,37 +63,29 @@ class OrdersListCreateView(ListCreateAPIView):
     def post(self, request, *args, **kwargs):
         if not request.user or not request.user.is_authenticated:
             return Response({'detail': 'Authentifizierung erforderlich.'}, status=status.HTTP_401_UNAUTHORIZED)
-        try:
-            profile = Profile.objects.get(user=request.user)
-        except Profile.DoesNotExist:
-            return Response({'detail': 'Kein Profil gefunden.'}, status=status.HTTP_401_UNAUTHORIZED)
-        if profile.type != 'customer':
-            return Response({'detail': 'Nur Kunden dürfen Bestellungen anlegen.'}, status=status.HTTP_403_FORBIDDEN)
-        offer_detail_id = request.data.get('offer_detail_id')
-        if not offer_detail_id:
-            return Response({'detail': 'offer_detail_id muss angegeben werden.'}, status=status.HTTP_400_BAD_REQUEST)
-        try:
-            offer_detail_id_int = int(offer_detail_id)
-        except (ValueError, TypeError):
-            return Response({'detail': 'offer_detail_id muss eine Zahl sein.'}, status=status.HTTP_400_BAD_REQUEST)
-        try:
-            offer_detail = OfferDetail.objects.get(pk=offer_detail_id_int)
-        except OfferDetail.DoesNotExist:
-            return Response({'detail': 'Angebotsdetail nicht gefunden.'}, status=status.HTTP_404_NOT_FOUND)
-        offer = offer_detail.offer
-        if not offer:
-            return Response({'detail': 'Kein zugehöriges Angebot gefunden.'}, status=status.HTTP_404_NOT_FOUND)
-        try:
-            order = Order.objects.create(
-                user=request.user,
-                offer=offer,
-                offer_detail=offer_detail,
-                status='in_progress',
-            )
-            serializer = self.get_serializer(order)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        except Exception:
-            return Response({'detail': 'Interner Serverfehler.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        # Validate customer profile
+        profile, error = OrderBusinessLogic.validate_customer_profile(request.user)
+        if error:
+            status_code = status.HTTP_401_UNAUTHORIZED if "nicht gefunden" in error else status.HTTP_403_FORBIDDEN
+            return Response({'detail': error}, status=status_code)
+        
+        # Validate offer detail
+        offer_detail, error = OrderBusinessLogic.validate_offer_detail_id(
+            request.data.get('offer_detail_id')
+        )
+        if error:
+            status_code = status.HTTP_400_BAD_REQUEST if "muss" in error else status.HTTP_404_NOT_FOUND
+            return Response({'detail': error}, status=status_code)
+        
+        # Create order
+        order, error = OrderBusinessLogic.create_order(request.user, offer_detail)
+        if error:
+            status_code = status.HTTP_404_NOT_FOUND if "nicht gefunden" in error else status.HTTP_500_INTERNAL_SERVER_ERROR
+            return Response({'detail': error}, status=status_code)
+        
+        serializer = self.get_serializer(order)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def delete(self, request, *args, **kwargs):
         if not request.user or not request.user.is_authenticated:
@@ -109,8 +110,7 @@ class OrderDetailView(RetrieveUpdateDestroyAPIView):
 
     def get_object(self):
         order = super().get_object()
-        # Check permissions - only order owner or business owner can access
-        if self.request.user != order.user and (not hasattr(order, 'offer') or self.request.user != order.offer.owner):
-            from rest_framework.exceptions import PermissionDenied
+        # Check permissions using business logic
+        if not OrderBusinessLogic.check_order_access_permission(self.request.user, order):
             raise PermissionDenied("You do not have permission to access this order.")
         return order

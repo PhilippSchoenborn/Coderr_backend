@@ -5,6 +5,7 @@ from rest_framework.generics import RetrieveUpdateAPIView
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from .models import Profile
 from .serializers import ProfileSerializer
+from .business_logic import ProfileBusinessLogic
 
 class ProfileDetailView(RetrieveUpdateAPIView):
     """Retrieve and update the authenticated user's profile."""
@@ -19,20 +20,24 @@ class ProfileDetailView(RetrieveUpdateAPIView):
         """Update the user's own profile. Only the owner can patch their profile."""
         if not request.user or not request.user.is_authenticated:
             return Response({'detail': 'Authentifizierung erforderlich.'}, status=status.HTTP_401_UNAUTHORIZED)
+        
         try:
             profile = self.get_object()
         except Exception:
             return Response({'detail': 'Profil nicht gefunden.'}, status=status.HTTP_404_NOT_FOUND)
-        if profile.user != request.user:
+        
+        if not ProfileBusinessLogic.check_profile_ownership(profile, request.user):
             return Response({'detail': 'Sie dürfen nur Ihr eigenes Profil bearbeiten.'}, status=status.HTTP_403_FORBIDDEN)
+        
         data = request.data.copy()
         serializer = ProfileSerializer(profile, data=data, partial=True, context={'request': request})
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        # E-Mail separat im User-Objekt speichern
+        
+        # Handle email update using business logic
         if 'email' in serializer.validated_data:
-            profile.user.email = serializer.validated_data['email']
-            profile.user.save()
+            ProfileBusinessLogic.update_user_email(profile, serializer.validated_data['email'])
+        
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -40,28 +45,17 @@ class ProfileDetailView(RetrieveUpdateAPIView):
         """Retrieve the authenticated user's profile."""
         if not request.user or not request.user.is_authenticated:
             return Response({'detail': 'Authentifizierung erforderlich.'}, status=status.HTTP_401_UNAUTHORIZED)
+        
         try:
             profile = self.get_object()
         except Exception:
             return Response({'detail': 'Profil nicht gefunden.'}, status=status.HTTP_404_NOT_FOUND)
-        try:
-            response_data = {
-                'user': profile.user.id if profile.user else None,
-                'username': profile.username,
-                'first_name': profile.first_name or '',
-                'last_name': profile.last_name or '',
-                'file': profile.file.name if profile.file else None,
-                'location': profile.location or '',
-                'tel': profile.tel or '',
-                'description': profile.description or '',
-                'working_hours': profile.working_hours or '',
-                'type': profile.type,
-                'email': profile.user.email if profile.user else '',
-                'created_at': profile.created_at,
-            }
-            return Response(response_data, status=status.HTTP_200_OK)
-        except Exception:
+        
+        response_data = ProfileBusinessLogic.get_profile_response_data(profile)
+        if response_data is None:
             return Response({'detail': 'Interner Serverfehler.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        return Response(response_data, status=status.HTTP_200_OK)
 
 class ProfileListView(ReadOnlyModelViewSet):
     """List profiles by type (customer or business). Auth required."""
@@ -75,28 +69,16 @@ class ProfileListView(ReadOnlyModelViewSet):
     def get_queryset(self):
         """Return queryset filtered by type if provided."""
         profile_type = self.request.query_params.get('type')
-        if profile_type in ['customer', 'business']:
-            return Profile.objects.filter(type=profile_type)
-        return Profile.objects.all()
+        return ProfileBusinessLogic.filter_profiles_by_type(Profile.objects.all(), profile_type)
 
     def list(self, request, *args, **kwargs):
         """List all profiles for the authenticated user, optionally filtered by type."""
         if not request.user or not request.user.is_authenticated:
             return Response({'detail': 'Authentifizierung erforderlich.'}, status=status.HTTP_401_UNAUTHORIZED)
+        
         queryset = self.filter_queryset(self.get_queryset())
         profiles = [
-            {
-                'user': profile.user.id if profile.user else None,
-                'username': profile.username,
-                'first_name': profile.first_name or '',
-                'last_name': profile.last_name or '',
-                'location': profile.location or '',
-                'tel': profile.tel or '',
-                'description': profile.description or '',
-                'working_hours': profile.working_hours or '',
-                'file': profile.file.name if profile.file else None,
-                'type': profile.type
-            }
+            ProfileBusinessLogic.get_profile_list_data(profile)
             for profile in queryset
         ]
         return Response(profiles, status=status.HTTP_200_OK)

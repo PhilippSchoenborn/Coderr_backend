@@ -1,8 +1,18 @@
 from django.urls import path
-from .views import BaseInfoView
-from apps.offers.urls import offer_detail_urls
-from apps.orders.urls import order_count_urls
+from .views import (
+    BaseInfoView, OfferDetailDetailView, DashboardView, 
+    HelloWorldView, PublicProfileListView, MyOffersListView, 
+    PublicOfferListView
+)
+from apps.orders.views import OrderCountView
 
 urlpatterns = [
     path('base-info/', BaseInfoView.as_view(), name='base-info'),
-] + offer_detail_urls + order_count_urls
+    path('dashboard/', DashboardView.as_view(), name='dashboard'),
+    path('hello/', HelloWorldView.as_view(), name='hello-world'),
+    path('public-profiles/', PublicProfileListView.as_view(), name='public-profiles'),
+    path('my-offers/', MyOffersListView.as_view(), name='my-offers'),
+    path('public-offers/', PublicOfferListView.as_view(), name='public-offers'),
+    path('offerdetails/<int:pk>/', OfferDetailDetailView.as_view(), name='offerdetails-detail'),
+    path('order-count/<int:business_user_id>/', OrderCountView.as_view(), name='order-count'),
+]
