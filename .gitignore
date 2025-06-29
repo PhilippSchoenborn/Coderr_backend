@@ -206,5 +206,9 @@ CODE_MIGRATION_COMPLETE.md
 FINAL_MIGRATION_REVIEW.md
 MIGRATION_SUMMARY.md
 STRUCTURE_README.md
-migration_reference/
 
+# Test
+tests/
+
+# Documentation
+Documentation/

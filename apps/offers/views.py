@@ -13,18 +13,78 @@ from .business_logic import OfferBusinessLogic
 
 
 class OfferListPagination(PageNumberPagination):
+    page_size = 6  # Default page size as used in frontend
     page_size_query_param = 'page_size'
+    max_page_size = 100
 
 
 class OfferListCreateView(ListCreateAPIView):
     queryset = Offer.objects.all()
     serializer_class = OfferSerializer
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
+    pagination_class = OfferListPagination
+    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
+    ordering_fields = ['updated_at', 'created_at']
+    search_fields = ['title', 'description']
 
     def get_permissions(self):
         if self.request.method == 'POST':
             return [IsAuthenticated()]
         return [AllowAny()]
+    
+    def get_queryset(self):
+        """Apply filters to the queryset based on query parameters."""
+        from django.db.models import Min, Q
+        
+        queryset = Offer.objects.select_related('owner').prefetch_related('details').all()
+        
+        # Apply annotations for filtering
+        queryset = queryset.annotate(
+            min_detail_price=Min('details__price'),
+            min_detail_delivery=Min('details__delivery_time_in_days')
+        )
+        
+        # Apply filters
+        creator_id = self.request.query_params.get('creator_id')
+        min_price = self.request.query_params.get('min_price')
+        max_delivery_time = self.request.query_params.get('max_delivery_time')
+        search = self.request.query_params.get('search')
+        
+        if creator_id:
+            queryset = queryset.filter(owner_id=creator_id)
+        
+        if min_price:
+            try:
+                min_price_val = float(min_price)
+                queryset = queryset.filter(min_detail_price__gte=min_price_val)
+            except (ValueError, TypeError):
+                pass
+        
+        if max_delivery_time:
+            try:
+                max_delivery_val = int(max_delivery_time)
+                queryset = queryset.filter(min_detail_delivery__lte=max_delivery_val)
+            except (ValueError, TypeError):
+                pass
+        
+        if search:
+            queryset = queryset.filter(
+                Q(title__icontains=search) | Q(description__icontains=search)
+            )
+        
+        # Remove duplicates and apply ordering
+        queryset = queryset.distinct()
+        
+        # Apply custom ordering
+        ordering = self.request.query_params.get('ordering')
+        if ordering == 'updated_at':
+            queryset = queryset.order_by('-updated_at')
+        elif ordering == '-updated_at':
+            queryset = queryset.order_by('-updated_at')
+        else:
+            queryset = queryset.order_by('-created_at')  # Default ordering
+        
+        return queryset
 
     def post(self, request, *args, **kwargs):
         """Create a new offer with business logic validation"""

@@ -77,29 +77,58 @@ class PublicOfferListView(ListAPIView):
     permission_classes = [AllowAny]
     pagination_class = PageNumberPagination
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
-    ordering_fields = ['updated_at', 'min_price']
+    ordering_fields = ['updated_at', 'min_detail_price']
     search_fields = ['title', 'description']
 
     def get_queryset(self):
-        queryset = Offer.objects.all()
+        from django.db.models import Min, Q
+        
+        queryset = Offer.objects.select_related('owner').prefetch_related('details').all()
+        
+        # Apply annotations for filtering
+        queryset = queryset.annotate(
+            min_detail_price=Min('details__price'),
+            min_detail_delivery=Min('details__delivery_time_in_days')
+        )
+        
         creator_id = self.request.query_params.get('creator_id')
         min_price = self.request.query_params.get('min_price')
         max_delivery_time = self.request.query_params.get('max_delivery_time')
         search = self.request.query_params.get('search')
+        
         if creator_id:
             queryset = queryset.filter(owner_id=creator_id)
+        
         if min_price:
-            queryset = queryset.filter(details__price__gte=min_price)
+            try:
+                min_price_val = float(min_price)
+                queryset = queryset.filter(min_detail_price__gte=min_price_val)
+            except (ValueError, TypeError):
+                pass
+        
         if max_delivery_time:
-            queryset = queryset.filter(details__delivery_time_in_days__lte=max_delivery_time)
+            try:
+                max_delivery_val = int(max_delivery_time)
+                queryset = queryset.filter(min_detail_delivery__lte=max_delivery_val)
+            except (ValueError, TypeError):
+                pass
+        
         if search:
-            queryset = queryset.filter(title__icontains=search) | queryset.filter(description__icontains=search)
+            queryset = queryset.filter(
+                Q(title__icontains=search) | Q(description__icontains=search)
+            )
+        
+        # Remove duplicates and apply ordering
         queryset = queryset.distinct()
+        
         ordering = self.request.query_params.get('ordering')
         if ordering == 'updated_at':
             queryset = queryset.order_by('-updated_at')
-        elif ordering == 'min_price':
-            queryset = sorted(queryset, key=lambda o: min([d.price for d in o.details.all()]) if o.details.exists() else float('inf'))
+        elif ordering == 'min_price' or ordering == 'min_detail_price':
+            queryset = queryset.order_by('min_detail_price')
+        else:
+            queryset = queryset.order_by('-created_at')  # Default ordering
+            
         return queryset
 
 class OfferDetailDetailView(APIView):

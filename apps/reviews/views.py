@@ -20,9 +20,6 @@ class ReviewsListCreateView(APIView):
         Return a list of reviews filtered by business_user_id, reviewer_id, and optionally ordered by 'updated_at' or 'rating'.
         Only accessible for authenticated users.
         """
-        if not request.user or not request.user.is_authenticated:
-            return Response({'detail': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
-        
         business_user_id = request.query_params.get('business_user_id')
         reviewer_id = request.query_params.get('reviewer_id')
         ordering = request.query_params.get('ordering')
@@ -41,13 +38,11 @@ class ReviewsListCreateView(APIView):
         Returns 201 on success, 400/401/403/404 on error.
         """
         user = request.user
-        if not user or not user.is_authenticated:
-            return Response({'detail': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
         
         # Validate customer profile
         profile, error = ReviewBusinessLogic.validate_customer_profile(user)
         if error:
-            return Response({'detail': error}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'detail': error}, status=status.HTTP_403_FORBIDDEN)
         
         serializer = ReviewSerializer(data=request.data)
         if serializer.is_valid():
@@ -104,9 +99,6 @@ class ReviewDetailView(APIView):
         if not review:
             return Response({'detail': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
         
-        if not request.user or not request.user.is_authenticated:
-            return Response({'detail': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
-        
         if not ReviewBusinessLogic.check_review_ownership(review, request.user.id):
             return Response({'detail': 'You do not have permission to update this review.'}, status=status.HTTP_403_FORBIDDEN)
         
@@ -125,9 +117,6 @@ class ReviewDetailView(APIView):
         review = ReviewBusinessLogic.find_review_by_id(REVIEWS, pk)
         if not review:
             return Response({'detail': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
-        
-        if not request.user or not request.user.is_authenticated:
-            return Response({'detail': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
         
         if not ReviewBusinessLogic.check_review_ownership(review, request.user.id):
             return Response({'detail': 'You do not have permission to delete this review.'}, status=status.HTTP_403_FORBIDDEN)

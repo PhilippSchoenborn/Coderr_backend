@@ -16,6 +16,20 @@ class Offer(models.Model):
     def __str__(self):
         """Return the offer title as string representation."""
         return self.title
+    
+    @property
+    def min_price(self):
+        """Return the minimum price from all offer details."""
+        if self.details.exists():
+            return min(detail.price for detail in self.details.all())
+        return self.price or 0
+    
+    @property
+    def min_delivery_time(self):
+        """Return the minimum delivery time from all offer details."""
+        if self.details.exists():
+            return min(detail.delivery_time_in_days for detail in self.details.all())
+        return 1
 
 
 class OfferDetail(models.Model):

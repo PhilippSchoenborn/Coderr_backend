@@ -12,9 +12,6 @@ class CompletedOrderCountView(APIView):
     permission_classes = [IsAuthenticated]
     
     def get(self, request, business_user_id):
-        if not request.user or not request.user.is_authenticated:
-            return Response({'detail': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
-        
         count, error = OrderBusinessLogic.get_order_count_for_business(
             business_user_id, 'completed'
         )
@@ -27,9 +24,6 @@ class InProgressOrderCountView(APIView):
     permission_classes = [IsAuthenticated]
     
     def get(self, request, business_user_id):
-        if not request.user or not request.user.is_authenticated:
-            return Response({'detail': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
-        
         count, error = OrderBusinessLogic.get_order_count_for_business(
             business_user_id, 'in_progress'
         )
@@ -43,9 +37,6 @@ class OrderCountView(APIView):
     permission_classes = [IsAuthenticated]
     
     def get(self, request, business_user_id):
-        if not request.user or not request.user.is_authenticated:
-            return Response({'detail': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
-        
         count, error = OrderBusinessLogic.get_order_count_for_business(
             business_user_id, 'in_progress'
         )
@@ -57,17 +48,19 @@ class OrderCountView(APIView):
 class OrdersListCreateView(ListCreateAPIView):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
-    permission_classes = [AllowAny]
     pagination_class = None
 
+    def get_permissions(self):
+        """Set permissions based on the HTTP method."""
+        if self.request.method == 'POST':
+            return [IsAuthenticated()]
+        return [IsAuthenticated()]  # All methods require authentication
+    
     def post(self, request, *args, **kwargs):
-        if not request.user or not request.user.is_authenticated:
-            return Response({'detail': 'Authentifizierung erforderlich.'}, status=status.HTTP_401_UNAUTHORIZED)
-        
         # Validate customer profile
         profile, error = OrderBusinessLogic.validate_customer_profile(request.user)
         if error:
-            status_code = status.HTTP_401_UNAUTHORIZED if "nicht gefunden" in error else status.HTTP_403_FORBIDDEN
+            status_code = status.HTTP_403_FORBIDDEN if "Nur Kunden" in error else status.HTTP_404_NOT_FOUND
             return Response({'detail': error}, status=status_code)
         
         # Validate offer detail

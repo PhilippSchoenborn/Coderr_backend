@@ -18,9 +18,6 @@ class ProfileDetailView(RetrieveUpdateAPIView):
 
     def patch(self, request, *args, **kwargs):
         """Update the user's own profile. Only the owner can patch their profile."""
-        if not request.user or not request.user.is_authenticated:
-            return Response({'detail': 'Authentifizierung erforderlich.'}, status=status.HTTP_401_UNAUTHORIZED)
-        
         try:
             profile = self.get_object()
         except Exception:
@@ -43,9 +40,6 @@ class ProfileDetailView(RetrieveUpdateAPIView):
 
     def get(self, request, *args, **kwargs):
         """Retrieve the authenticated user's profile."""
-        if not request.user or not request.user.is_authenticated:
-            return Response({'detail': 'Authentifizierung erforderlich.'}, status=status.HTTP_401_UNAUTHORIZED)
-        
         try:
             profile = self.get_object()
         except Exception:
@@ -73,9 +67,6 @@ class ProfileListView(ReadOnlyModelViewSet):
 
     def list(self, request, *args, **kwargs):
         """List all profiles for the authenticated user, optionally filtered by type."""
-        if not request.user or not request.user.is_authenticated:
-            return Response({'detail': 'Authentifizierung erforderlich.'}, status=status.HTTP_401_UNAUTHORIZED)
-        
         queryset = self.filter_queryset(self.get_queryset())
         profiles = [
             ProfileBusinessLogic.get_profile_list_data(profile)
