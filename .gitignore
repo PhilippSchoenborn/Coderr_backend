@@ -200,3 +200,10 @@ celerybeat-schedule.db
 
 # Frontend files - do not push to repository
 project.Coderr-main/
+
+# Migration documentation files - development only
+CODE_MIGRATION_COMPLETE.md
+FINAL_MIGRATION_REVIEW.md
+MIGRATION_SUMMARY.md
+STRUCTURE_README.md
+
