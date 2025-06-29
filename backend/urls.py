@@ -23,10 +23,10 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     
     # App URLs
-    path('api/profiles/', include('apps.profiles.urls')),
-    path('api/offers/', include('apps.offers.urls')),
-    path('api/orders/', include('apps.orders.urls')),
-    path('api/reviews/', include('apps.reviews.urls')),
+    path('api/profile/', include('apps.profiles.urls')),
+    path('api/offer/', include('apps.offers.urls')),
+    path('api/order/', include('apps.orders.urls')),
+    path('api/review/', include('apps.reviews.urls')),
     path('api/', include('core.urls')),
 ]
 

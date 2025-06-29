@@ -64,7 +64,7 @@ Authorization: Token IHRE_TOKEN_HIER
 ### 1. Alle Angebote abrufen (Authentifiziert)
 
 ```http
-GET http://127.0.0.1:8000/api/offers/
+GET http://127.0.0.1:8000/api/offer/
 Authorization: Token IHRE_TOKEN_HIER
 ```
 
@@ -73,7 +73,7 @@ Authorization: Token IHRE_TOKEN_HIER
 ### 2. Angebote ohne Authentifizierung (Fehlertest)
 
 ```http
-GET http://127.0.0.1:8000/api/offers/
+GET http://127.0.0.1:8000/api/offer/
 ```
 
 **Erwartetes Ergebnis:** Status 200 (da GET erlaubt ist für diesen Endpoint)
@@ -81,7 +81,7 @@ GET http://127.0.0.1:8000/api/offers/
 ### 3. Angebot erstellen ohne Authentifizierung (Fehlertest)
 
 ```http
-POST http://127.0.0.1:8000/api/offers/
+POST http://127.0.0.1:8000/api/offer/
 Content-Type: application/json
 
 {
@@ -98,7 +98,7 @@ Content-Type: application/json
 ### 1. Alle öffentlichen Angebote
 
 ```http
-GET http://127.0.0.1:8000/api/public-offers/
+GET http://127.0.0.1:8000/api/public-offer/
 ```
 
 **Erwartetes Ergebnis:** Status 200, Liste aller Angebote
@@ -106,7 +106,7 @@ GET http://127.0.0.1:8000/api/public-offers/
 ### 2. Öffentliche Angebote mit Pagination
 
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?page_size=2
+GET http://127.0.0.1:8000/api/public-offer/?page_size=2
 ```
 
 **Erwartetes Ergebnis:** Status 200, maximal 2 Angebote pro Seite
@@ -114,7 +114,7 @@ GET http://127.0.0.1:8000/api/public-offers/?page_size=2
 ### 3. Pagination - Nächste Seite
 
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?page_size=2&page=2
+GET http://127.0.0.1:8000/api/public-offer/?page_size=2&page=2
 ```
 
 ---
@@ -125,127 +125,127 @@ GET http://127.0.0.1:8000/api/public-offers/?page_size=2&page=2
 
 #### Günstige Angebote (>= 100€)
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?min_price=100
+GET http://127.0.0.1:8000/api/public-offer/?min_price=100
 ```
 
 #### Teure Angebote (>= 1000€)
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?min_price=1000
+GET http://127.0.0.1:8000/api/public-offer/?min_price=1000
 ```
 
 #### Sehr teure Angebote (>= 50000€) - sollte wenige/keine Ergebnisse geben
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?min_price=50000
+GET http://127.0.0.1:8000/api/public-offer/?min_price=50000
 ```
 
 #### Ungültiger Min Price Filter
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?min_price=ungueltig
+GET http://127.0.0.1:8000/api/public-offer/?min_price=ungueltig
 ```
 
 **Erwartetes Ergebnis:** Filter wird ignoriert, alle Angebote gezeigt
 
 #### Negativer Min Price Filter
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?min_price=-100
+GET http://127.0.0.1:8000/api/public-offer/?min_price=-100
 ```
 
 ### 2. Max Delivery Time Filter
 
 #### Schnelle Lieferung (<= 7 Tage)
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?max_delivery_time=7
+GET http://127.0.0.1:8000/api/public-offer/?max_delivery_time=7
 ```
 
 #### Standard Lieferung (<= 14 Tage)
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?max_delivery_time=14
+GET http://127.0.0.1:8000/api/public-offer/?max_delivery_time=14
 ```
 
 #### Lange Lieferung (<= 30 Tage)
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?max_delivery_time=30
+GET http://127.0.0.1:8000/api/public-offer/?max_delivery_time=30
 ```
 
 #### Sehr kurze Lieferung (<= 1 Tag)
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?max_delivery_time=1
+GET http://127.0.0.1:8000/api/public-offer/?max_delivery_time=1
 ```
 
 #### Ungültiger Delivery Time Filter
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?max_delivery_time=abc
+GET http://127.0.0.1:8000/api/public-offer/?max_delivery_time=abc
 ```
 
 ### 3. Search Filter
 
 #### Suche nach "Design"
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?search=design
+GET http://127.0.0.1:8000/api/public-offer/?search=design
 ```
 
 #### Suche nach "Web"
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?search=web
+GET http://127.0.0.1:8000/api/public-offer/?search=web
 ```
 
 #### Suche nach "SEO"
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?search=seo
+GET http://127.0.0.1:8000/api/public-offer/?search=seo
 ```
 
 #### Suche nach nicht existierendem Begriff
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?search=nichtexistierend
+GET http://127.0.0.1:8000/api/public-offer/?search=nichtexistierend
 ```
 
 #### Leere Suche
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?search=
+GET http://127.0.0.1:8000/api/public-offer/?search=
 ```
 
 ### 4. Creator ID Filter
 
 #### Filter nach Designer (User ID 9)
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?creator_id=9
+GET http://127.0.0.1:8000/api/public-offer/?creator_id=9
 ```
 
 #### Filter nach Developer (User ID 10)
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?creator_id=10
+GET http://127.0.0.1:8000/api/public-offer/?creator_id=10
 ```
 
 #### Filter nach nicht existierender User ID
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?creator_id=99999
+GET http://127.0.0.1:8000/api/public-offer/?creator_id=99999
 ```
 
 #### Ungültige Creator ID
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?creator_id=ungueltig
+GET http://127.0.0.1:8000/api/public-offer/?creator_id=ungueltig
 ```
 
 ### 5. Kombinierte Filter
 
 #### Teure Angebote mit schneller Lieferung
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?min_price=500&max_delivery_time=7
+GET http://127.0.0.1:8000/api/public-offer/?min_price=500&max_delivery_time=7
 ```
 
 #### Design-Angebote unter 300€
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?search=design&min_price=1&max_delivery_time=100
+GET http://127.0.0.1:8000/api/public-offer/?search=design&min_price=1&max_delivery_time=100
 ```
 
 #### Alle Filter kombiniert
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?min_price=100&max_delivery_time=21&search=web&creator_id=10
+GET http://127.0.0.1:8000/api/public-offer/?min_price=100&max_delivery_time=21&search=web&creator_id=10
 ```
 
 #### Widersprüchliche Filter (sollte keine Ergebnisse geben)
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?min_price=100000&max_delivery_time=1
+GET http://127.0.0.1:8000/api/public-offer/?min_price=100000&max_delivery_time=1
 ```
 
 ---
@@ -254,27 +254,27 @@ GET http://127.0.0.1:8000/api/public-offers/?min_price=100000&max_delivery_time=
 
 ### 1. Sortierung nach Erstellungsdatum (Standard)
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?ordering=created_at
+GET http://127.0.0.1:8000/api/public-offer/?ordering=created_at
 ```
 
 ### 2. Sortierung nach Update-Datum
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?ordering=updated_at
+GET http://127.0.0.1:8000/api/public-offer/?ordering=updated_at
 ```
 
 ### 3. Sortierung nach Mindestpreis (aufsteigend)
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?ordering=min_price
+GET http://127.0.0.1:8000/api/public-offer/?ordering=min_price
 ```
 
 ### 4. Sortierung nach Mindestpreis mit Filter
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?ordering=min_price&min_price=100
+GET http://127.0.0.1:8000/api/public-offer/?ordering=min_price&min_price=100
 ```
 
 ### 5. Ungültige Sortierung
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?ordering=ungueltigesfeld
+GET http://127.0.0.1:8000/api/public-offer/?ordering=ungueltigesfeld
 ```
 
 ---
@@ -283,38 +283,38 @@ GET http://127.0.0.1:8000/api/public-offers/?ordering=ungueltigesfeld
 
 ### 1. Alle Profile ohne Authentifizierung (Fehlertest)
 ```http
-GET http://127.0.0.1:8000/api/profiles/
+GET http://127.0.0.1:8000/api/profile/
 ```
 
 **Erwartetes Ergebnis:** Status 401 Unauthorized
 
 ### 2. Alle Profile mit Authentifizierung
 ```http
-GET http://127.0.0.1:8000/api/profiles/
+GET http://127.0.0.1:8000/api/profile/
 Authorization: Token IHRE_TOKEN_HIER
 ```
 
 ### 3. Business Profile
 ```http
-GET http://127.0.0.1:8000/api/profiles/business/
+GET http://127.0.0.1:8000/api/profile/business/
 Authorization: Token IHRE_TOKEN_HIER
 ```
 
 ### 4. Customer Profile
 ```http
-GET http://127.0.0.1:8000/api/profiles/customer/
+GET http://127.0.0.1:8000/api/profile/customer/
 Authorization: Token IHRE_TOKEN_HIER
 ```
 
 ### 5. Spezifisches Profil abrufen
 ```http
-GET http://127.0.0.1:8000/api/profiles/9/
+GET http://127.0.0.1:8000/api/profile/9/
 Authorization: Token IHRE_TOKEN_HIER
 ```
 
 ### 6. Nicht existierendes Profil
 ```http
-GET http://127.0.0.1:8000/api/profiles/99999/
+GET http://127.0.0.1:8000/api/profile/99999/
 Authorization: Token IHRE_TOKEN_HIER
 ```
 
@@ -326,20 +326,20 @@ Authorization: Token IHRE_TOKEN_HIER
 
 ### 1. Alle Bestellungen ohne Authentifizierung
 ```http
-GET http://127.0.0.1:8000/api/orders/
+GET http://127.0.0.1:8000/api/order/
 ```
 
 **Erwartetes Ergebnis:** Status 401 Unauthorized
 
 ### 2. Alle Bestellungen mit Authentifizierung
 ```http
-GET http://127.0.0.1:8000/api/orders/
+GET http://127.0.0.1:8000/api/order/
 Authorization: Token IHRE_TOKEN_HIER
 ```
 
 ### 3. Bestellung erstellen (Beispiel)
 ```http
-POST http://127.0.0.1:8000/api/orders/
+POST http://127.0.0.1:8000/api/order/
 Authorization: Token IHRE_TOKEN_HIER
 Content-Type: application/json
 
@@ -355,14 +355,14 @@ Content-Type: application/json
 
 ### 1. Alle Bewertungen ohne Authentifizierung
 ```http
-GET http://127.0.0.1:8000/api/reviews/
+GET http://127.0.0.1:8000/api/review/
 ```
 
 **Erwartetes Ergebnis:** Status 401 Unauthorized
 
 ### 2. Alle Bewertungen mit Authentifizierung
 ```http
-GET http://127.0.0.1:8000/api/reviews/
+GET http://127.0.0.1:8000/api/review/
 Authorization: Token IHRE_TOKEN_HIER
 ```
 
@@ -372,42 +372,42 @@ Authorization: Token IHRE_TOKEN_HIER
 
 ### 1. Sehr große page_size
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?page_size=10000
+GET http://127.0.0.1:8000/api/public-offer/?page_size=10000
 ```
 
 ### 2. Negative page_size
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?page_size=-1
+GET http://127.0.0.1:8000/api/public-offer/?page_size=-1
 ```
 
 ### 3. page_size = 0
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?page_size=0
+GET http://127.0.0.1:8000/api/public-offer/?page_size=0
 ```
 
 ### 4. Sehr große Seitenzahl
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?page=999999
+GET http://127.0.0.1:8000/api/public-offer/?page=999999
 ```
 
 ### 5. Multiple gleiche Parameter
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?min_price=100&min_price=200&min_price=300
+GET http://127.0.0.1:8000/api/public-offer/?min_price=100&min_price=200&min_price=300
 ```
 
 ### 6. SQL Injection Versuche (sollten sicher abgefangen werden)
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?search='; DROP TABLE offers; --
+GET http://127.0.0.1:8000/api/public-offer/?search='; DROP TABLE offers; --
 ```
 
 ### 7. XSS Versuche
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?search=<script>alert('xss')</script>
+GET http://127.0.0.1:8000/api/public-offer/?search=<script>alert('xss')</script>
 ```
 
 ### 8. Sehr langer Suchbegriff
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?search=dasisteinextremlangersuchbegriffderviellängeriststalseinüblichersuchbegriffundsolltetestenobdieapimitlangeneingabenumgehenkann
+GET http://127.0.0.1:8000/api/public-offer/?search=dasisteinextremlangersuchbegriffderviellängeriststalseinüblichersuchbegriffundsolltetestenobdieapimitlangeneingabenumgehenkann
 ```
 
 ---
@@ -421,12 +421,12 @@ GET http://127.0.0.1:8000/api/nichtexistierend/
 
 ### 2. Falsche HTTP-Methode
 ```http
-DELETE http://127.0.0.1:8000/api/public-offers/
+DELETE http://127.0.0.1:8000/api/public-offer/
 ```
 
 ### 3. Falscher URL-Pfad
 ```http
-GET http://127.0.0.1:8000/api/offers/nichtexistierend/
+GET http://127.0.0.1:8000/api/offer/nichtexistierend/
 ```
 
 ---
@@ -435,20 +435,20 @@ GET http://127.0.0.1:8000/api/offers/nichtexistierend/
 
 ### 1. Viele gleichzeitige Filter
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?min_price=1&max_delivery_time=1000&search=&creator_id=&ordering=min_price&page_size=1&page=1
+GET http://127.0.0.1:8000/api/public-offer/?min_price=1&max_delivery_time=1000&search=&creator_id=&ordering=min_price&page_size=1&page=1
 ```
 
 ### 2. Pagination durch alle Seiten
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?page_size=1&page=1
+GET http://127.0.0.1:8000/api/public-offer/?page_size=1&page=1
 ```
 
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?page_size=1&page=2
+GET http://127.0.0.1:8000/api/public-offer/?page_size=1&page=2
 ```
 
 ```http
-GET http://127.0.0.1:8000/api/public-offers/?page_size=1&page=3
+GET http://127.0.0.1:8000/api/public-offer/?page_size=1&page=3
 ```
 
 ---
@@ -457,7 +457,7 @@ GET http://127.0.0.1:8000/api/public-offers/?page_size=1&page=3
 
 ### 1. Gültiges Angebot erstellen
 ```http
-POST http://127.0.0.1:8000/api/offers/
+POST http://127.0.0.1:8000/api/offer/
 Authorization: Token IHRE_TOKEN_HIER
 Content-Type: application/json
 
@@ -495,7 +495,7 @@ Content-Type: application/json
 
 ### 2. Angebot mit fehlendem Titel (Fehlertest)
 ```http
-POST http://127.0.0.1:8000/api/offers/
+POST http://127.0.0.1:8000/api/offer/
 Authorization: Token IHRE_TOKEN_HIER
 Content-Type: application/json
 
@@ -532,7 +532,7 @@ Content-Type: application/json
 
 ### 3. Angebot mit nur 2 Details (Fehlertest - braucht genau 3)
 ```http
-POST http://127.0.0.1:8000/api/offers/
+POST http://127.0.0.1:8000/api/offer/
 Authorization: Token IHRE_TOKEN_HIER
 Content-Type: application/json
 
@@ -562,7 +562,7 @@ Content-Type: application/json
 
 ### 4. Angebot mit fehlenden Detail-Feldern
 ```http
-POST http://127.0.0.1:8000/api/offers/
+POST http://127.0.0.1:8000/api/offer/
 Authorization: Token IHRE_TOKEN_HIER
 Content-Type: application/json
 
@@ -607,7 +607,7 @@ Authorization: Token IHRE_TOKEN_HIER
 
 ### Nach Logout - Token sollte ungültig sein
 ```http
-GET http://127.0.0.1:8000/api/offers/
+GET http://127.0.0.1:8000/api/offer/
 Authorization: Token IHRE_UNGÜLTIGER_TOKEN
 ```
 
@@ -685,18 +685,18 @@ GET http://127.0.0.1:8000/api/hello/
 
 ### Public Profiles (Öffentlich)
 ```http
-GET http://127.0.0.1:8000/api/public-profiles/
+GET http://127.0.0.1:8000/api/public-profile/
 ```
 
 ### My Offers (Authentifiziert)
 ```http
-GET http://127.0.0.1:8000/api/my-offers/
+GET http://127.0.0.1:8000/api/my-offer/
 Authorization: Token IHRE_TOKEN_HIER
 ```
 
 ### Offer Details
 ```http
-GET http://127.0.0.1:8000/api/offerdetails/1/
+GET http://127.0.0.1:8000/api/offerdetail/1/
 ```
 
 ---

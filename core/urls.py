@@ -21,9 +21,9 @@ urlpatterns = [
     path('base-info', BaseInfoView.as_view(), name='base-info-no-slash'),
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('hello/', HelloWorldView.as_view(), name='hello-world'),
-    path('public-profiles/', PublicProfileListView.as_view(), name='public-profiles'),
-    path('my-offers/', MyOffersListView.as_view(), name='my-offers'),
-    path('public-offers/', PublicOfferListView.as_view(), name='public-offers'),
-    path('offerdetails/<int:pk>/', OfferDetailDetailView.as_view(), name='offerdetails-detail'),
+    path('public-profile/', PublicProfileListView.as_view(), name='public-profiles'),
+    path('my-offer/', MyOffersListView.as_view(), name='my-offers'),
+    path('public-offer/', PublicOfferListView.as_view(), name='public-offers'),
+    path('offerdetail/<int:pk>/', OfferDetailDetailView.as_view(), name='offerdetails-detail'),
     path('order-count/<int:business_user_id>/', OrderCountView.as_view(), name='order-count'),
 ]
