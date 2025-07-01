@@ -168,6 +168,9 @@ celery.log
 docs/_build/
 docs/build/
 site/
+Documentation
+Documentation/FUNCTION_QUALITY_ANALYSIS.md
+
 # Documentation/ - Keep this for project documentation
 
 # Temporary Summary Files - EXCLUDE THESE

@@ -95,7 +95,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
     def validate_offer_detail_id(self, value):
         """Validate offer detail ID."""
         try:
-            offer_detail = OfferDetail.objects.get(id=value)
+            OfferDetail.objects.get(id=value)
             return value
         except OfferDetail.DoesNotExist:
             raise serializers.ValidationError("Offer detail not found.")

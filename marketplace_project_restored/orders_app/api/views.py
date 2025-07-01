@@ -33,9 +33,10 @@ class OrderListCreateView(ListCreateAPIView):
         """Return filtered queryset."""
         user = self.request.user
         # Return orders where user is either customer or business owner
-        return Order.objects.filter(
+        return (Order.objects.filter(
             Q(customer=user) | Q(offer_detail__offer__owner=user)
-        ).select_related('customer', 'offer_detail__offer__owner').prefetch_related('offer_detail')
+        ).select_related('customer', 'offer_detail__offer__owner')
+         .prefetch_related('offer_detail'))
 
     def perform_create(self, serializer):
         """Perform order creation."""
@@ -66,8 +67,9 @@ class OrderDetailView(RetrieveUpdateDestroyAPIView):
     """
     Retrieve, update or delete an order.
     """
-    queryset = Order.objects.all().select_related('customer',
-                                                  'offer_detail__offer__owner').prefetch_related('offer_detail')
+    queryset = (Order.objects.all()
+                .select_related('customer', 'offer_detail__offer__owner')
+                .prefetch_related('offer_detail'))
     serializer_class = OrderSerializer
 
     def get_permissions(self):

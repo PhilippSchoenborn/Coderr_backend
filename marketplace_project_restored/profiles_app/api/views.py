@@ -240,8 +240,11 @@ class MeView(APIView):
             if profile.type == 'business':
                 from orders_app.models import Order
                 from orders_app.api.serializers import OrderSerializer
-                orders = Order.objects.filter(offer_detail__offer__owner=request.user).select_related(
-                    'customer', 'offer_detail__offer__owner').prefetch_related('offer_detail')
+                orders = (Order.objects
+                          .filter(offer_detail__offer__owner=request.user)
+                          .select_related('customer',
+                                          'offer_detail__offer__owner')
+                          .prefetch_related('offer_detail'))
                 data['orders'] = OrderSerializer(orders, many=True).data
 
             return Response(data, status=status.HTTP_200_OK)

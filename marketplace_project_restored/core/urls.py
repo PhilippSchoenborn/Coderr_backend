@@ -19,7 +19,10 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.http import JsonResponse
-from auth_app.api.views import RegisterView, LoginView, BaseInfoView, OrderCountView, CompletedOrderCountView, DashboardView, LogoutView
+from auth_app.api.views import (
+    RegisterView, LoginView, BaseInfoView, OrderCountView,
+    CompletedOrderCountView, DashboardView, LogoutView
+)
 from offers_app.api.views import PublicOfferListView, MyOffersView
 from profiles_app.api.views import PublicProfilesView, MeView
 

@@ -45,7 +45,9 @@ class PublicOfferListView(ListAPIView):
 
     def get_queryset(self):
         """Get filtered queryset based on query parameters."""
-        queryset = Offer.objects.all().select_related('owner').prefetch_related('offer_details')
+        queryset = (Offer.objects.all()
+                    .select_related('owner')
+                    .prefetch_related('offer_details'))
 
         # Always annotate with min_price and min_delivery_time for consistent filtering
         queryset = queryset.annotate(
@@ -189,7 +191,9 @@ class OfferDetailView(RetrieveUpdateDestroyAPIView):
         """Update the object."""
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer = self.get_serializer(
+            instance, data=request.data, partial=partial
+        )
         serializer.is_valid(raise_exception=True)
         offer = serializer.save()
 

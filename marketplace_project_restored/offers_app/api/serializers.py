@@ -2,7 +2,6 @@ from rest_framework import serializers
 from ..models import Offer, OfferDetail
 from django.contrib.auth.models import User
 from django.db import models
-from profiles_app.models import Profile
 import base64
 from django.core.files.base import ContentFile
 

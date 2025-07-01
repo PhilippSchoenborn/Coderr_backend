@@ -1,6 +1,5 @@
 from rest_framework.authentication import TokenAuthentication
 from rest_framework import exceptions
-from django.contrib.auth.models import AnonymousUser
 
 
 class OptionalTokenAuthentication(TokenAuthentication):

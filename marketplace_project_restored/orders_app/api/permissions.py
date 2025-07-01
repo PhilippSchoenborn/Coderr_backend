@@ -9,7 +9,8 @@ class IsOrderRelatedUser(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         """Check if user has object permission."""
         # User is either the customer or the business owner
-        return obj.customer == request.user or obj.offer_detail.offer.owner == request.user
+        return (obj.customer == request.user or
+                obj.offer_detail.offer.owner == request.user)
 
 
 class IsBusinessOwner(permissions.BasePermission):
@@ -40,7 +41,8 @@ class IsAdminOrOrderRelatedUser(permissions.BasePermission):
             return True
 
         # User is either the customer or the business owner
-        return obj.customer == request.user or obj.offer_detail.offer.owner == request.user
+        return (obj.customer == request.user or
+                obj.offer_detail.offer.owner == request.user)
 
 
 class IsAdminOrBusinessOwner(permissions.BasePermission):

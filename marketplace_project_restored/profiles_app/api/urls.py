@@ -20,6 +20,8 @@ urlpatterns = [
         views.ProfileDetailView.as_view(),
         name='profile-detail-legacy'),
     path('profile/', views.ProfileView.as_view(), name='profile-legacy'),
-    path('business/', views.BusinessProfileListView.as_view(), name='business-profiles'),
-    path('customer/', views.CustomerProfileListView.as_view(), name='customer-profiles'),
+    path('business/', views.BusinessProfileListView.as_view(),
+         name='business-profiles'),
+    path('customer/', views.CustomerProfileListView.as_view(),
+         name='customer-profiles'),
 ]
