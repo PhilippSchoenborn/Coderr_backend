@@ -30,5 +30,4 @@ class Review(models.Model):
         unique_together = ['reviewer', 'business_user']
 
     def __str__(self):
-        return (f"Review by {self.reviewer.username} for "
-                f"{self.business_user.username} ({self.rating}/5)")
+        return f"Review by {self.reviewer.username} for {self.business_user.username} ({self.rating}/5)"
