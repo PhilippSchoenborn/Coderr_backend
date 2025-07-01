@@ -1,0 +1,285 @@
+# =============================================================================
+# Django Marketplace Project .gitignore
+# Production-Ready Configuration
+# =============================================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+build/
+dist/
+.Python
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+local_settings.py
+instance/
+.webassets-cache
+
+# Media files (user uploads - not for production repo)
+media/profiles/*
+media/offers/*
+!media/profiles/.gitkeep
+!media/offers/.gitkeep
+!media/profiles/default.jpg
+!media/offers/default.jpg
+
+# Static files (generated)
+staticfiles/
+static/
+collected_static/
+
+# Virtual Environment
+venv/
+.venv/
+env/
+.env*
+ENV/
+env.bak/
+venv.bak/
+
+# Environment variables and secrets
+.env
+.env.*
+.env.local
+.env.production
+.env.staging
+.env.development
+.env.test
+.env.backup
+secrets.json
+config.json
+environment.json
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+db_backup/
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.spyderproject
+.spyproject
+.ropeproject
+
+# Testing and Coverage
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.tox/
+.nox/
+simple_rest_client.json
+API_TEST_RESULTS.md
+check_code_quality.py
+clean_docstrings.py
+CODE_QUALITY_REPORT.md
+fix_code_quality.py
+REFACTORING_SUGGESTIONS.md
+
+# Test Files and Directories
+test_*.py
+*_test.py
+*test*.py
+tests/
+test/
+testing/
+spec/
+specs/
+__tests__/
+.pytest_cache/
+pytestdebug.log
+
+# Test Reports and Results
+test-results/
+test-reports/
+coverage/
+junit.xml
+test.xml
+*.tap
+*.junit
+
+# API Testing
+API_TESTING_SUMMARY.md
+DEPLOYMENT_READY.md
+fix_test_urls.py
+run_tests.py
+*.rest
+*.http
+postman/
+insomnia/
+swagger-ui/
+
+# Load Testing
+load_test.py
+stress_test.py
+performance_test.py
+locustfile.py
+
+# Legacy Project
+project.Coderr-main/
+
+
+# Development and Debug files
+debug.py
+debug_*.py
+test_*.py
+*_test.py
+*test*.py
+tests/test_*.py
+api_tests/
+*.rest
+*.http
+dump.rdb
+debug_api.py
+debug_offer.py
+debug_*.py
+test_data.py
+sample_data.py
+mock_data.py
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+*.orig
+*.rej
+*~
+
+# Logs
+*.log
+logs/
+django.log
+celery.log
+
+# Documentation builds
+docs/_build/
+docs/build/
+site/
+
+# Node.js (if using frontend tools)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Frontend Projects and Builds
+frontend/
+client/
+web/
+www/
+public/
+build/
+dist/
+out/
+.next/
+.nuxt/
+.output/
+.vercel/
+.netlify/
+
+# Frontend Dependencies and Cache
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.pnpm-store/
+bower_components/
+jspm_packages/
+
+# Frontend Development
+.storybook/
+storybook-static/
+.docusaurus/
+
+# Compiled translations
+*.mo
+*.pot
+
+# Backup files
+backup/
+backups/
+*.sql.gz
+*.dump
+
+# Local configuration overrides
+local_config.py
+local_settings.py
+settings_local.py
+
+# Deployment files
+deployment/
+deploy/
+ansible/
+.vagrant/
+Vagrantfile.local
+
+# Cache
+.cache/
+cache/
+.sass-cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# PyCharm
+.idea/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# Security scan results
+.bandit
+bandit-report.*
+
+# Development scripts
+run_dev.py
+debug_server.py
+load_test_data.py
+reset_db.py
+
+# macOS
+.AppleDouble
+.LSOverride
+
+# Windows
+desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
