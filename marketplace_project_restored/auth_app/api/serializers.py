@@ -5,14 +5,14 @@ from django.contrib.auth.models import User
 class RegisterSerializer(serializers.ModelSerializer):
     """
     Serializer for user registration with profile creation.
-    
+
     Handles user account creation and automatically creates
     an associated profile with the specified type (customer/business).
     """
     password = serializers.CharField(write_only=True)
     repeated_password = serializers.CharField(write_only=True)
     type = serializers.ChoiceField(choices=['customer', 'business'], write_only=True)
-    
+
     class Meta:
         model = User
         fields = ('username', 'email', 'password', 'repeated_password', 'type')
@@ -22,11 +22,12 @@ class RegisterSerializer(serializers.ModelSerializer):
         if data['password'] != data['repeated_password']:
             raise serializers.ValidationError("Passwords do not match.")
         return data
-    
+
     def validate_email(self, value):
         """Validate that email is unique."""
         if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError("A user with this email address already exists.")
+            raise serializers.ValidationError(
+                "A user with this email address already exists.")
         return value
 
     def validate_username(self, value):
@@ -38,18 +39,18 @@ class RegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """
         Create user and associated profile.
-        
+
         Args:
             validated_data: Validated serializer data
-            
+
         Returns:
             User: Created user instance with associated profile
         """
         from profiles_app.models import Profile
-        
+
         profile_type = validated_data.pop('type')
         validated_data.pop('repeated_password')
-        
+
         user = self._create_user(validated_data)
         self._create_profile(user, profile_type)
         return user
@@ -71,7 +72,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 class LoginSerializer(serializers.Serializer):
     """
     Serializer for user authentication.
-    
+
     Accepts username/email and password for login.
     """
     username = serializers.CharField()

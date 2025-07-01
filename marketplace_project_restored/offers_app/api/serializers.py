@@ -11,20 +11,21 @@ class Base64OrFileImageField(serializers.Field):
     """
     Custom field that accepts either a base64 string or a file upload.
     """
+
     def to_internal_value(self, data):
         """Process image data from various formats."""
         print(f"DEBUG: Image field received data type: {type(data)}, value: {data}")
-        
+
         # Handle file upload (from FormData)
         if hasattr(data, 'read'):
             print("DEBUG: Processing as file upload")
             return data
-        
+
         # Handle base64 string
         if isinstance(data, str) and data.startswith('data:image'):
             print("DEBUG: Processing as base64 string")
             return self._process_base64_image(data)
-        
+
         return self._handle_empty_or_invalid_data(data)
 
     def _handle_empty_or_invalid_data(self, data):
@@ -32,16 +33,17 @@ class Base64OrFileImageField(serializers.Field):
         if not data:
             print("DEBUG: No image data provided")
             return None
-            
+
         print(f"DEBUG: Invalid image format: {data}")
-        raise serializers.ValidationError("Invalid image format. Expected file or base64 string.")
+        raise serializers.ValidationError(
+            "Invalid image format. Expected file or base64 string.")
 
     def _process_base64_image(self, data):
         """Convert base64 string to file."""
         format, imgstr = data.split(';base64,')
         ext = format.split('/')[-1]
         return ContentFile(base64.b64decode(imgstr), name=f'offer_image.{ext}')
-    
+
     def to_representation(self, value):
         """Return representation of the object."""
         return None  # We don't need to return the image data
@@ -53,7 +55,14 @@ class OfferDetailSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = OfferDetail
-        fields = ['id', 'title', 'revisions', 'delivery_time_in_days', 'price', 'features', 'offer_type']
+        fields = [
+            'id',
+            'title',
+            'revisions',
+            'delivery_time_in_days',
+            'price',
+            'features',
+            'offer_type']
 
 
 class UserDetailsSerializer(serializers.ModelSerializer):
@@ -75,11 +84,30 @@ class OfferSerializer(serializers.ModelSerializer):
     min_price = serializers.SerializerMethodField()
     min_delivery_time = serializers.SerializerMethodField()
     image = serializers.SerializerMethodField()  # For frontend compatibility
-    
+
     class Meta:
         model = Offer
-        fields = ['id', 'user', 'user_details', 'title', 'file', 'image', 'description', 'details', 'min_price', 'min_delivery_time', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'user', 'user_details', 'min_price', 'min_delivery_time', 'created_at', 'updated_at']
+        fields = [
+            'id',
+            'user',
+            'user_details',
+            'title',
+            'file',
+            'image',
+            'description',
+            'details',
+            'min_price',
+            'min_delivery_time',
+            'created_at',
+            'updated_at']
+        read_only_fields = [
+            'id',
+            'user',
+            'user_details',
+            'min_price',
+            'min_delivery_time',
+            'created_at',
+            'updated_at']
 
     def get_user(self, obj):
         """Return the owner's ID as 'user' field."""
@@ -97,13 +125,15 @@ class OfferSerializer(serializers.ModelSerializer):
     def get_min_price(self, obj):
         """Return the minimum price from offer details."""
         if obj.offer_details.exists():
-            return obj.offer_details.aggregate(min_price=models.Min('price'))['min_price']
+            return obj.offer_details.aggregate(
+                min_price=models.Min('price'))['min_price']
         return None
 
     def get_min_delivery_time(self, obj):
         """Return the minimum delivery time from offer details."""
         if obj.offer_details.exists():
-            return obj.offer_details.aggregate(min_time=models.Min('delivery_time_in_days'))['min_time']
+            return obj.offer_details.aggregate(
+                min_time=models.Min('delivery_time_in_days'))['min_time']
         return None
 
 
@@ -113,26 +143,27 @@ class OfferCreateSerializer(serializers.ModelSerializer):
     """
     details = OfferDetailSerializer(many=True, required=True)
     image = Base64OrFileImageField(required=False, allow_null=True, write_only=True)
-    
+
     class Meta:
         model = Offer
         fields = ['title', 'description', 'image', 'details']
-    
+
     def validate_details(self, details):
         """Validate that exactly 3 details are provided."""
         if len(details) != 3:
-            raise serializers.ValidationError("Exactly 3 offer details (basic, standard, premium) are required.")
+            raise serializers.ValidationError(
+                "Exactly 3 offer details (basic, standard, premium) are required.")
         return details
-    
+
     def create(self, validated_data):
         """Create offer with details."""
         details_data = validated_data.pop('details', [])
         image_data = validated_data.pop('image', None)
-        
+
         # Handle image (both base64 and file are processed by custom field)
         if image_data:
             validated_data['file'] = image_data
-        
+
         offer = Offer.objects.create(**validated_data)
         self._create_offer_details(offer, details_data)
         return offer
@@ -150,20 +181,20 @@ class OfferUpdateSerializer(serializers.ModelSerializer):
     """
     details = OfferDetailSerializer(many=True, required=False)
     image = Base64OrFileImageField(required=False, write_only=True, allow_null=True)
-    
+
     class Meta:
         model = Offer
         fields = ['title', 'description', 'image', 'details']
-    
+
     def update(self, instance, validated_data):
         """Update offer with new data."""
         details_data = validated_data.pop('details', [])
         image_data = validated_data.pop('image', None)
-        
+
         # Handle image upload (both base64 and file are processed by custom field)
         if image_data:
             instance.file = image_data
-        
+
         self._update_offer_fields(instance, validated_data)
         self._update_offer_details(instance, details_data)
         return instance

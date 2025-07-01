@@ -11,7 +11,7 @@ class OrderSerializer(serializers.ModelSerializer):
     customer_user = serializers.SerializerMethodField()
     offer_detail = OfferDetailSerializer(read_only=True)
     business_user = serializers.SerializerMethodField()
-    
+
     # Flattened fields from offer_detail
     title = serializers.SerializerMethodField()
     revisions = serializers.SerializerMethodField()
@@ -19,13 +19,35 @@ class OrderSerializer(serializers.ModelSerializer):
     price = serializers.SerializerMethodField()
     features = serializers.SerializerMethodField()
     offer_type = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Order
-        fields = ['id', 'customer_user', 'offer_detail', 'business_user', 'title', 'revisions', 
-                 'delivery_time_in_days', 'price', 'features', 'offer_type', 'status', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'customer_user', 'business_user', 'title', 'revisions', 
-                           'delivery_time_in_days', 'price', 'features', 'offer_type', 'created_at', 'updated_at']
+        fields = [
+            'id',
+            'customer_user',
+            'offer_detail',
+            'business_user',
+            'title',
+            'revisions',
+            'delivery_time_in_days',
+            'price',
+            'features',
+            'offer_type',
+            'status',
+            'created_at',
+            'updated_at']
+        read_only_fields = [
+            'id',
+            'customer_user',
+            'business_user',
+            'title',
+            'revisions',
+            'delivery_time_in_days',
+            'price',
+            'features',
+            'offer_type',
+            'created_at',
+            'updated_at']
 
     def get_customer_user(self, obj):
         """Return the customer's ID as 'customer_user' field."""
@@ -65,11 +87,11 @@ class OrderCreateSerializer(serializers.ModelSerializer):
     Serializer for creating Order.
     """
     offer_detail_id = serializers.IntegerField()
-    
+
     class Meta:
         model = Order
         fields = ['offer_detail_id']
-    
+
     def validate_offer_detail_id(self, value):
         """Validate offer detail ID."""
         try:
@@ -77,15 +99,15 @@ class OrderCreateSerializer(serializers.ModelSerializer):
             return value
         except OfferDetail.DoesNotExist:
             raise serializers.ValidationError("Offer detail not found.")
-    
+
     def create(self, validated_data):
         """Create new order."""
         offer_detail = OfferDetail.objects.get(id=validated_data['offer_detail_id'])
-        
+
         # Check if customer is trying to order their own service
         if offer_detail.offer.owner == self.context['request'].user:
             raise serializers.ValidationError("You cannot order your own service.")
-        
+
         return Order.objects.create(
             customer=self.context['request'].user,
             offer_detail=offer_detail

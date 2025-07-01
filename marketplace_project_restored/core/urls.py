@@ -23,6 +23,7 @@ from auth_app.api.views import RegisterView, LoginView, BaseInfoView, OrderCount
 from offers_app.api.views import PublicOfferListView, MyOffersView
 from profiles_app.api.views import PublicProfilesView, MeView
 
+
 def api_root(request):
     """Root API endpoint with available endpoints"""
     return JsonResponse({
@@ -51,32 +52,47 @@ def api_root(request):
         }
     })
 
+
 urlpatterns = [
     path('api/', api_root, name='api-root'),  # Root API endpoint
     path('admin/', admin.site.urls),
-    
+
     # Exact specification endpoints
     path('api/registration/', RegisterView.as_view(), name='api-registration'),
     path('api/login/', LoginView.as_view(), name='api-login'),
     path('api/logout/', LogoutView.as_view(), name='api-logout'),
     path('api/dashboard/', DashboardView.as_view(), name='api-dashboard'),
     path('api/base-info/', BaseInfoView.as_view(), name='api-base-info'),
-    path('api/order-count/<int:business_user_id>/', OrderCountView.as_view(), name='api-order-count'),
-    path('api/completed-order-count/<int:business_user_id>/', CompletedOrderCountView.as_view(), name='api-completed-order-count'),
-    
+    path('api/order-count/<int:business_user_id>/',
+         OrderCountView.as_view(), name='api-order-count'),
+    path(
+        'api/completed-order-count/<int:business_user_id>/',
+        CompletedOrderCountView.as_view(),
+        name='api-completed-order-count'),
+
     # Public offers endpoint
     path('api/public-offers/', PublicOfferListView.as_view(), name='api-public-offers'),
     path('api/my-offers/', MyOffersView.as_view(), name='api-my-offers'),
-    path('api/public-profiles/', PublicProfilesView.as_view(), name='api-public-profiles'),
+    path(
+        'api/public-profiles/',
+        PublicProfilesView.as_view(),
+        name='api-public-profiles'),
     path('api/me/', MeView.as_view(), name='api-me'),
-    
+
     # App-specific endpoints
     path('api/profile/', include('profiles_app.api.urls')),   # For /api/profile/{pk}/
-    path('api/profiles/', include('profiles_app.api.urls')),  # For /api/profiles/business/, customer/
-    path('api/offers/', include('offers_app.api.urls')),      # For /api/offers/ endpoints
-    path('api/offerdetails/', include('offers_app.api.detail_urls')), # For /api/offerdetails/{id}/
-    path('api/orders/', include('orders_app.api.urls')),      # For /api/orders/ endpoints
-    path('api/reviews/', include('reviews_app.api.urls')),    # For /api/reviews/ endpoints
+    # For /api/profiles/business/, customer/
+    path('api/profiles/', include('profiles_app.api.urls')),
+    # For /api/offers/ endpoints
+    path('api/offers/', include('offers_app.api.urls')),
+    path(
+        'api/offerdetails/',
+        include('offers_app.api.detail_urls')),
+    # For /api/offerdetails/{id}/
+    # For /api/orders/ endpoints
+    path('api/orders/', include('orders_app.api.urls')),
+    # For /api/reviews/ endpoints
+    path('api/reviews/', include('reviews_app.api.urls')),
 ]
 
 # Serve media files during development
