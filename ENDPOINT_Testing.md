@@ -737,3 +737,14 @@ Nach dem Ausführen der Testdaten-Scripts sollten folgende Daten vorhanden sein:
 - Extrem Günstiges Design (min_price: 1.0, min_delivery_time: 1)
 
 Diese Testdaten decken verschiedene Preisklassen und Lieferzeiten ab, um alle Filter-Szenarien zu testen.
+
+---
+
+## Aktuelles Benutzerprofil (ME) Endpunkt
+
+### GET /api/me/
+```
+Authorization: Token {{token}}
+```
+
+### Erwartet: Profildaten für den aktuell authentifizierten Benutzer mit Bestellungen (für Geschäftsnutzer)

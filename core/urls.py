@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     BaseInfoView, OfferDetailDetailView, DashboardView, 
     HelloWorldView, PublicProfileListView, MyOffersListView, 
-    PublicOfferListView
+    PublicOfferListView, UserProfileMeView
 )
 from apps.orders.views import OrderCountView
 from apps.authentication.views import LoginView, RegistrationView, LogoutView
@@ -15,6 +15,10 @@ urlpatterns = [
     path('registration', RegistrationView.as_view(), name='registration-no-slash'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('logout', LogoutView.as_view(), name='logout-no-slash'),
+    
+    # Profile "me" endpoint
+    path('me/', UserProfileMeView.as_view(), name='profile-me'),
+    path('me', UserProfileMeView.as_view(), name='profile-me-no-slash'),
     
     # Core endpoints
     path('base-info/', BaseInfoView.as_view(), name='base-info'),

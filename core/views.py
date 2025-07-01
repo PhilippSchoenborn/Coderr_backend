@@ -150,3 +150,27 @@ class OfferDetailDetailView(APIView):
             'offer_type': offer_detail.offer_type,
         }
         return Response(data, status=status.HTTP_200_OK)
+
+class UserProfileMeView(APIView):
+    """Get the current authenticated user's profile data."""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """Return the current user's profile with orders data."""
+        try:
+            user = request.user
+            if not hasattr(user, 'profile'):
+                return Response({'detail': 'Profil nicht gefunden.'}, status=status.HTTP_404_NOT_FOUND)
+            
+            profile = user.profile
+            profile_data = ProfileSerializer(profile, context={'request': request}).data
+            
+            # Include orders for business users
+            if profile.type == 'business':
+                orders = Order.objects.filter(offer__owner=user)
+                orders_data = OrderSerializer(orders, many=True, context={'request': request}).data
+                profile_data['orders'] = orders_data
+            
+            return Response(profile_data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'detail': 'Interner Serverfehler.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
