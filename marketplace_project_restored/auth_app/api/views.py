@@ -249,3 +249,30 @@ class HelloView(APIView):
         return Response({
             'message': 'Hello from Django Service Marketplace Backend!'
         })
+
+
+class LogoutView(APIView):
+    """
+    API endpoint for user logout.
+    
+    POST: Deletes the user's authentication token.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        """
+        Logout user by deleting their authentication token.
+        
+        Returns:
+            Response: Success message (200) or error (400)
+        """
+        try:
+            # Delete the user's token
+            request.user.auth_token.delete()
+            return Response({
+                'message': 'Successfully logged out.'
+            }, status=status.HTTP_200_OK)
+        except Exception:
+            return Response({
+                'error': 'Error logging out.'
+            }, status=status.HTTP_400_BAD_REQUEST)

@@ -85,24 +85,21 @@ coverage.xml
 .hypothesis/
 .tox/
 .nox/
-simple_rest_client.json
-API_TEST_RESULTS.md
-check_code_quality.py
-clean_docstrings.py
-CODE_QUALITY_REPORT.md
-fix_code_quality.py
-REFACTORING_SUGGESTIONS.md
 
-# Test Files and Directories
-test_*.py
-*_test.py
-*test*.py
+# Test Files and Directories - INTENTIONALLY EXCLUDED
 tests/
 test/
 testing/
 spec/
 specs/
 __tests__/
+test_*.py
+*_test.py
+*test*.py
+debug_*.py
+check_*.py
+validate_*.py
+extended_validation.py
 .pytest_cache/
 pytestdebug.log
 
@@ -115,13 +112,11 @@ test.xml
 *.tap
 *.junit
 
-# API Testing
-API_TESTING_SUMMARY.md
-DEPLOYMENT_READY.md
-fix_test_urls.py
-run_tests.py
+# API Testing Files - INTENTIONALLY EXCLUDED
 *.rest
 *.http
+API_TESTING_SUMMARY.md
+DEPLOYMENT_READY.md
 postman/
 insomnia/
 swagger-ui/
@@ -135,22 +130,14 @@ locustfile.py
 # Legacy Project
 project.Coderr-main/
 
-
-# Development and Debug files
+# Development and Debug files - INTENTIONALLY EXCLUDED
 debug.py
-debug_*.py
-test_*.py
-*_test.py
-*test*.py
-tests/test_*.py
-api_tests/
-*.rest
-*.http
+create_*.py
+show_*.py
+quick_*.py
 dump.rdb
-debug_api.py
-debug_offer.py
-debug_*.py
-test_data.py
+*_fix_*.py
+*summary*.py
 sample_data.py
 mock_data.py
 
@@ -177,10 +164,21 @@ logs/
 django.log
 celery.log
 
-# Documentation builds
+# Documentation builds - KEEP IMPORTANT DOCS
 docs/_build/
 docs/build/
 site/
+# Documentation/ - Keep this for project documentation
+
+# Temporary Summary Files - EXCLUDE THESE
+*_SUMMARY.md
+*_FIX_*.md
+*_COMPLETE.md
+FILTER_FIX_SUMMARY.md
+CODE_MIGRATION_COMPLETE.md
+MIGRATION_SUMMARY.md
+REFACTORING_COMPLETE.md
+FINAL_MIGRATION_REVIEW.md
 
 # Node.js (if using frontend tools)
 node_modules/

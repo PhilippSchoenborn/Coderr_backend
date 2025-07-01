@@ -21,6 +21,20 @@ class Offer(models.Model):
     
     def __str__(self):
         return self.title
+    
+    @property
+    def min_price(self):
+        """Return the minimum price from offer details."""
+        if self.offer_details.exists():
+            return self.offer_details.aggregate(min_price=models.Min('price'))['min_price']
+        return None
+    
+    @property
+    def min_delivery_time(self):
+        """Return the minimum delivery time from offer details."""
+        if self.offer_details.exists():
+            return self.offer_details.aggregate(min_time=models.Min('delivery_time_in_days'))['min_time']
+        return None
 
 
 class OfferDetail(models.Model):

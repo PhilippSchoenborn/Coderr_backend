@@ -66,9 +66,10 @@ class BusinessProfileListView(ListAPIView):
     API endpoint to list all business profiles.
     
     Returns a list of all profiles with type='business'.
+    Requires authentication.
     """
     serializer_class = ProfileSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     queryset = Profile.objects.filter(type='business').select_related('user')
     pagination_class = None  # Disable pagination
 
@@ -78,9 +79,10 @@ class CustomerProfileListView(ListAPIView):
     API endpoint to list all customer profiles.
     
     Returns a list of all profiles with type='customer'.
+    Requires authentication.
     """
     serializer_class = ProfileSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     queryset = Profile.objects.filter(type='customer').select_related('user')
     pagination_class = None  # Disable pagination
 
@@ -89,7 +91,7 @@ class ProfileDetailView(RetrieveUpdateAPIView):
     """
     API endpoint to retrieve and update a specific profile by ID.
     
-    GET: Returns profile information for the specified user ID (public access)
+    GET: Returns profile information for the specified user ID (authentication required)
     PATCH: Updates the profile (only if user owns the profile)
     
     Users can only modify their own profile.
@@ -98,9 +100,7 @@ class ProfileDetailView(RetrieveUpdateAPIView):
     serializer_class = ProfileSerializer
     
     def get_permissions(self):
-        """Allow public read access, require authentication for updates."""
-        if self.request.method == 'GET':
-            return [AllowAny()]
+        """Require authentication for all operations."""
         return [IsAuthenticated()]
     
     def get_object(self):
@@ -200,3 +200,43 @@ class ProfileByUserIdView(RetrieveUpdateAPIView):
             response_serializer = ProfileSerializer(profile)
             return Response(response_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PublicProfilesView(ListAPIView):
+    """
+    Public list of all profiles (no authentication required).
+    """
+    serializer_class = ProfileSerializer
+    permission_classes = [AllowAny]
+    pagination_class = None
+    
+    def get_queryset(self):
+        """Get all profiles."""
+        return Profile.objects.all().select_related('user')
+
+
+class MeView(APIView):
+    """
+    Get current user's profile with orders (for business users).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """Get current user's profile data."""
+        try:
+            profile = request.user.profile
+            serializer = ProfileSerializer(profile)
+            data = serializer.data
+            
+            # Add orders if business user
+            if profile.type == 'business':
+                from orders_app.models import Order
+                from orders_app.api.serializers import OrderSerializer
+                orders = Order.objects.filter(
+                    offer_detail__offer__owner=request.user
+                ).select_related('customer', 'offer_detail__offer__owner').prefetch_related('offer_detail')
+                data['orders'] = OrderSerializer(orders, many=True).data
+            
+            return Response(data, status=status.HTTP_200_OK)
+        except Profile.DoesNotExist:
+            return Response({'detail': 'Profile not found.'}, status=status.HTTP_404_NOT_FOUND)

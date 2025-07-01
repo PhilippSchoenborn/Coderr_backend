@@ -69,6 +69,19 @@ class OrderDetailView(RetrieveUpdateDestroyAPIView):
         else:
             # Anyone related to the order can view it
             return [IsAuthenticated(), IsAdminOrOrderRelatedUser()]
+    
+    def get_object(self):
+        """Get object and handle permissions properly."""
+        try:
+            obj = super().get_object()
+            self.check_object_permissions(self.request, obj)
+            return obj
+        except Order.DoesNotExist:
+            from rest_framework.exceptions import NotFound
+            raise NotFound("Order not found.")
+        except PermissionDenied:
+            # Re-raise as 403, not 401
+            raise PermissionDenied("You do not have permission to access this order.")
 
 
 class OrderStatusUpdateView(APIView):

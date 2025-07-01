@@ -40,8 +40,8 @@ class ReviewListCreateView(ListCreateAPIView):
     def get_permissions(self):
         """Return appropriate permissions."""
         if self.request.method == 'POST':
-            return [IsCustomerUser()]
-        return [AllowAny()]  # Reviews are publicly readable
+            return [IsAuthenticated(), IsCustomerUser()]
+        return [IsAuthenticated()]  # Reviews require authentication to read
     
     def perform_create(self, serializer):
         """Perform review creation."""
