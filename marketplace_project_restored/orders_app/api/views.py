@@ -38,22 +38,21 @@ class OrderListCreateView(ListCreateAPIView):
         ).select_related('customer', 'offer_detail__offer__owner')
          .prefetch_related('offer_detail'))
 
-    def perform_create(self, serializer):
-        """Perform order creation."""
-        # Check if user is authenticated
-        if not self.request.user.is_authenticated:
+    def create(self, request, *args, **kwargs):
+        """Override create to handle permissions and validation properly."""
+        # First check authentication
+        if not request.user.is_authenticated:
             raise PermissionDenied("Authentication required to create orders.")
             
-        # Only customer users can create orders
-        if not hasattr(self.request.user, 'profile') or self.request.user.profile.type != 'customer':
+        # Then check user type permissions BEFORE data validation
+        if not hasattr(request.user, 'profile') or request.user.profile.type != 'customer':
             raise PermissionDenied("Only customer users can create orders.")
         
-        serializer.save()
-
-    def create(self, request, *args, **kwargs):
-        """Override create to return full order data."""
+        # Now validate the data (this should return 400 for bad data)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        
+        # Perform creation
         self.perform_create(serializer)
 
         # Return the created order with full data using OrderSerializer
@@ -64,6 +63,10 @@ class OrderListCreateView(ListCreateAPIView):
             response_serializer.data,
             status=status.HTTP_201_CREATED,
             headers=headers)
+
+    def perform_create(self, serializer):
+        """Perform order creation - permissions already checked."""
+        serializer.save()
 
 
 class OrderDetailView(RetrieveUpdateDestroyAPIView):

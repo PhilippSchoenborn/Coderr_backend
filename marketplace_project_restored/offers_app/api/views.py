@@ -132,6 +132,31 @@ class PublicOfferListView(ListAPIView):
                 # Invalid values are ignored, return all offers
                 pass
 
+        # Max price filter - Filtert auf das min_price Feld des Angebots (<=)
+        max_price = self.request.query_params.get('max_price')
+        if max_price:
+            try:
+                max_price = float(max_price)
+                if max_price >= 0:
+                    # Filter basierend auf der Annotation calculated_min_price (<= für
+                    # maximum)
+                    queryset = queryset.filter(calculated_min_price__lte=max_price)
+            except (ValueError, TypeError):
+                # Invalid values are ignored, return all offers
+                pass
+
+        # Exact price filter - Filtert nach exaktem min_price Wert (=)
+        exact_price = self.request.query_params.get('exact_price')
+        if exact_price:
+            try:
+                exact_price = float(exact_price)
+                if exact_price >= 0:
+                    # Filter basierend auf der Annotation calculated_min_price (= für exakt)
+                    queryset = queryset.filter(calculated_min_price=exact_price)
+            except (ValueError, TypeError):
+                # Invalid values are ignored, return all offers
+                pass
+
         # Max delivery time filter - Filtert auf das min_delivery_time Feld des
         # Angebots (<=)
         max_delivery_time = self.request.query_params.get('max_delivery_time')
@@ -267,6 +292,31 @@ class OfferListCreateView(ListCreateAPIView):
                 # Invalid values are ignored, return all offers
                 pass
 
+        # Max price filter - Filtert auf das min_price Feld des Angebots (<=)
+        max_price = self.request.query_params.get('max_price')
+        if max_price:
+            try:
+                max_price = float(max_price)
+                if max_price >= 0:
+                    # Filter basierend auf der Annotation calculated_min_price (<= für
+                    # maximum)
+                    queryset = queryset.filter(calculated_min_price__lte=max_price)
+            except (ValueError, TypeError):
+                # Invalid values are ignored, return all offers
+                pass
+
+        # Exact price filter - Filtert nach exaktem min_price Wert (=)
+        exact_price = self.request.query_params.get('exact_price')
+        if exact_price:
+            try:
+                exact_price = float(exact_price)
+                if exact_price >= 0:
+                    # Filter basierend auf der Annotation calculated_min_price (= für exakt)
+                    queryset = queryset.filter(calculated_min_price=exact_price)
+            except (ValueError, TypeError):
+                # Invalid values are ignored, return all offers
+                pass
+
         # Max delivery time filter - Filtert auf das min_delivery_time Feld des
         # Angebots (<=)
         max_delivery_time = self.request.query_params.get('max_delivery_time')
@@ -346,7 +396,7 @@ class OfferDetailView(RetrieveUpdateDestroyAPIView):
             # Only owners can modify/delete offers
             return [IsAuthenticated(), IsOwnerOnly()]
         else:
-            # Anyone (including customers) can view offers
+            # Anyone (including customers) can view offers - NO AUTHENTICATION REQUIRED
             return [AllowAny()]
 
     def get_serializer_class(self):

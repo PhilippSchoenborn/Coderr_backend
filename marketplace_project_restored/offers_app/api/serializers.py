@@ -222,8 +222,25 @@ class OfferUpdateSerializer(serializers.ModelSerializer):
         instance.save()
 
     def _update_offer_details(self, instance, details_data):
-        """Update offer details."""
+        """Update offer details with proper validation."""
         if details_data:
+            # Clear existing details
             instance.offer_details.all().delete()
+            
+            # Create new details with offer_type validation
             for detail_data in details_data:
+                # Validate offer_type is provided
+                if 'offer_type' not in detail_data:
+                    raise serializers.ValidationError(
+                        "offer_type is required for each detail when updating offers"
+                    )
+                
+                # Validate offer_type value
+                valid_types = ['basic', 'standard', 'premium']
+                offer_type = detail_data.get('offer_type')
+                if offer_type not in valid_types:
+                    raise serializers.ValidationError(
+                        f"Invalid offer_type '{offer_type}'. Must be one of: {valid_types}"
+                    )
+                
                 OfferDetail.objects.create(offer=instance, **detail_data)
