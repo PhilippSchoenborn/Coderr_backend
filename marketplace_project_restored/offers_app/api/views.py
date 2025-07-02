@@ -98,7 +98,7 @@ class PublicOfferListView(ListAPIView):
                 # Invalid values are ignored, return all offers
                 pass
 
-        # Min delivery time filter - Filtert auf das min_delivery_time Feld des
+        # Max delivery time filter - Filtert auf das min_delivery_time Feld des
         # Angebots (<=)
         max_delivery_time = self.request.query_params.get('max_delivery_time')
         if max_delivery_time:
@@ -110,15 +110,22 @@ class PublicOfferListView(ListAPIView):
                     queryset = queryset.filter(
                         calculated_min_delivery__lte=max_delivery_time)
             except (ValueError, TypeError):
-                # Invalid values are ignored, return all offers
-                pass
+                # Return 400 for invalid delivery_time values
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError(
+                    {"max_delivery_time": "Invalid delivery time. Must be a positive integer."}
+                )
 
         # Search filter (title and description)
         search = self.request.query_params.get('search')
         if search and search.strip():
+            search = search.strip()
             queryset = queryset.filter(
                 Q(title__icontains=search) | Q(description__icontains=search)
             ).distinct()
+            # If no results found after search, return empty queryset
+            if not queryset.exists():
+                return queryset.none()
 
         # Creator ID filter
         creator_id = self.request.query_params.get('creator_id')
@@ -178,8 +185,12 @@ class OfferDetailView(RetrieveUpdateDestroyAPIView):
 
     def get_permissions(self):
         """Return appropriate permissions."""
-        # All methods (including GET) require ownership
-        return [IsAuthenticated(), IsOwnerOnly()]
+        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
+            # Only owners can modify/delete offers
+            return [IsAuthenticated(), IsOwnerOnly()]
+        else:
+            # Anyone (including customers) can view offers
+            return [AllowAny()]
 
     def get_serializer_class(self):
         """Return appropriate serializer class."""

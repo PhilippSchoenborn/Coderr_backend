@@ -40,11 +40,14 @@ class OrderListCreateView(ListCreateAPIView):
 
     def perform_create(self, serializer):
         """Perform order creation."""
+        # Check if user is authenticated
+        if not self.request.user.is_authenticated:
+            raise PermissionDenied("Authentication required to create orders.")
+            
         # Only customer users can create orders
-        if not hasattr(
-                self.request.user,
-                'profile') or self.request.user.profile.type != 'customer':
+        if not hasattr(self.request.user, 'profile') or self.request.user.profile.type != 'customer':
             raise PermissionDenied("Only customer users can create orders.")
+        
         serializer.save()
 
     def create(self, request, *args, **kwargs):

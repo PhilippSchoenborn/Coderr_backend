@@ -62,6 +62,23 @@ class OfferDetailSerializer(serializers.ModelSerializer):
             'price',
             'features',
             'offer_type']
+        
+    def validate(self, data):
+        """Validate offer detail data."""
+        # Check if this is an update (has instance) or create
+        if self.instance is None:  # Creating new
+            if 'offer_type' not in data:
+                raise serializers.ValidationError(
+                    {"offer_type": "This field is required."}
+                )
+        else:  # Updating existing
+            # For PATCH operations, offer_type should be provided
+            request = self.context.get('request')
+            if request and request.method == 'PATCH' and 'offer_type' not in data:
+                raise serializers.ValidationError(
+                    {"offer_type": "This field is required for updates."}
+                )
+        return data
 
 
 class UserDetailsSerializer(serializers.ModelSerializer):

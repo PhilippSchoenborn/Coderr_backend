@@ -95,7 +95,15 @@ class OrderCreateSerializer(serializers.ModelSerializer):
     def validate_offer_detail_id(self, value):
         """Validate offer detail ID."""
         try:
-            OfferDetail.objects.get(id=value)
+            offer_detail = OfferDetail.objects.get(id=value)
+            # Check authorization within the serializer
+            user = self.context['request'].user
+            
+            # Check if customer is trying to order their own service
+            if offer_detail.offer.owner == user:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("You cannot order your own service.")
+                
             return value
         except OfferDetail.DoesNotExist:
             raise serializers.ValidationError("Offer detail not found.")
@@ -103,10 +111,6 @@ class OrderCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """Create new order."""
         offer_detail = OfferDetail.objects.get(id=validated_data['offer_detail_id'])
-
-        # Check if customer is trying to order their own service
-        if offer_detail.offer.owner == self.context['request'].user:
-            raise serializers.ValidationError("You cannot order your own service.")
 
         return Order.objects.create(
             customer=self.context['request'].user,
