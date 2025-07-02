@@ -43,8 +43,21 @@ class PublicOfferListView(ListAPIView):
     permission_classes = [AllowAny]
     pagination_class = CustomPageNumberPagination
 
+    def list(self, request, *args, **kwargs):
+        """Override list to handle validation errors."""
+        try:
+            return super().list(request, *args, **kwargs)
+        except Exception as e:
+            from rest_framework.exceptions import ValidationError
+            if isinstance(e, ValidationError):
+                return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+            raise
+
     def get_queryset(self):
         """Get filtered queryset based on query parameters."""
+        # Validate query parameters first
+        self._validate_query_params()
+        
         queryset = (Offer.objects.all()
                     .select_related('owner')
                     .prefetch_related('offer_details'))
@@ -80,6 +93,27 @@ class PublicOfferListView(ListAPIView):
 
         return queryset
 
+    def _validate_query_params(self):
+        """Validate query parameters and raise ValidationError if invalid."""
+        # Validate max_delivery_time parameter
+        max_delivery_time = self.request.query_params.get('max_delivery_time')
+        print(f"DEBUG: max_delivery_time = {max_delivery_time}")
+        if max_delivery_time:
+            try:
+                max_delivery_time = int(max_delivery_time)
+                print(f"DEBUG: Converted to int: {max_delivery_time}")
+                if max_delivery_time <= 0:
+                    from rest_framework.exceptions import ValidationError
+                    raise ValidationError(
+                        {"max_delivery_time": "Delivery time must be a positive integer."}
+                    )
+            except (ValueError, TypeError) as e:
+                print(f"DEBUG: ValueError/TypeError: {e}")
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError(
+                    {"max_delivery_time": "Invalid delivery time. Must be a positive integer."}
+                )
+
     def _apply_filters(self, queryset):
         """Apply filters based on query parameters."""
         # KORREKT: Filter direkt auf die berechneten min_price und
@@ -110,11 +144,8 @@ class PublicOfferListView(ListAPIView):
                     queryset = queryset.filter(
                         calculated_min_delivery__lte=max_delivery_time)
             except (ValueError, TypeError):
-                # Return 400 for invalid delivery_time values
-                from rest_framework.exceptions import ValidationError
-                raise ValidationError(
-                    {"max_delivery_time": "Invalid delivery time. Must be a positive integer."}
-                )
+                # This should not happen as validation is done in get_queryset
+                pass
 
         # Search filter (title and description)
         search = self.request.query_params.get('search')
@@ -156,6 +187,132 @@ class OfferListCreateView(ListCreateAPIView):
         if self.request.method == 'POST':
             return [IsBusinessUser()]
         return [AllowAny()]
+
+    def get_queryset(self):
+        """Get filtered queryset based on query parameters."""
+        # Validate query parameters first
+        self._validate_query_params()
+        
+        queryset = (Offer.objects.all()
+                    .select_related('owner')
+                    .prefetch_related('offer_details'))
+
+        # Always annotate with min_price and min_delivery_time for consistent filtering
+        queryset = queryset.annotate(
+            calculated_min_price=Min('offer_details__price'),
+            calculated_min_delivery=Min('offer_details__delivery_time_in_days')
+        )
+
+        # Apply filters
+        queryset = self._apply_filters(queryset)
+
+        # Apply ordering
+        ordering = self.request.query_params.get('ordering', '-created_at')
+        valid_orderings = [
+            'created_at',
+            '-created_at',
+            'updated_at',
+            '-updated_at',
+            'min_price',
+            '-min_price']
+
+        if ordering in valid_orderings:
+            if ordering == 'min_price':
+                queryset = queryset.order_by('calculated_min_price')
+            elif ordering == '-min_price':
+                queryset = queryset.order_by('-calculated_min_price')
+            else:
+                queryset = queryset.order_by(ordering)
+        else:
+            queryset = queryset.order_by('-created_at')
+
+        return queryset
+
+    def _validate_query_params(self):
+        """Validate query parameters and raise ValidationError if invalid."""
+        # Validate max_delivery_time parameter
+        max_delivery_time = self.request.query_params.get('max_delivery_time')
+        print(f"DEBUG: max_delivery_time = {max_delivery_time}")
+        if max_delivery_time:
+            try:
+                max_delivery_time = int(max_delivery_time)
+                print(f"DEBUG: Converted to int: {max_delivery_time}")
+                if max_delivery_time <= 0:
+                    from rest_framework.exceptions import ValidationError
+                    raise ValidationError(
+                        {"max_delivery_time": "Delivery time must be a positive integer."}
+                    )
+            except (ValueError, TypeError) as e:
+                print(f"DEBUG: ValueError/TypeError: {e}")
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError(
+                    {"max_delivery_time": "Invalid delivery time. Must be a positive integer."}
+                )
+
+    def _apply_filters(self, queryset):
+        """Apply filters based on query parameters."""
+        # KORREKT: Filter direkt auf die berechneten min_price und
+        # min_delivery_time Felder
+
+        # Min price filter - Filtert auf das min_price Feld des Angebots (>=)
+        min_price = self.request.query_params.get('min_price')
+        if min_price:
+            try:
+                min_price = float(min_price)
+                if min_price >= 0:
+                    # Filter basierend auf der Annotation calculated_min_price (>= für
+                    # minimum)
+                    queryset = queryset.filter(calculated_min_price__gte=min_price)
+            except (ValueError, TypeError):
+                # Invalid values are ignored, return all offers
+                pass
+
+        # Max delivery time filter - Filtert auf das min_delivery_time Feld des
+        # Angebots (<=)
+        max_delivery_time = self.request.query_params.get('max_delivery_time')
+        if max_delivery_time:
+            try:
+                max_delivery_time = int(max_delivery_time)
+                if max_delivery_time > 0:
+                    # Filter basierend auf der Annotation calculated_min_delivery (<=
+                    # für maximum)
+                    queryset = queryset.filter(
+                        calculated_min_delivery__lte=max_delivery_time)
+            except (ValueError, TypeError):
+                # This should not happen as validation is done in get_queryset
+                pass
+
+        # Search filter (title and description)
+        search = self.request.query_params.get('search')
+        if search and search.strip():
+            search = search.strip()
+            queryset = queryset.filter(
+                Q(title__icontains=search) | Q(description__icontains=search)
+            ).distinct()
+            # If no results found after search, return empty queryset
+            if not queryset.exists():
+                return queryset.none()
+
+        # Creator ID filter
+        creator_id = self.request.query_params.get('creator_id')
+        if creator_id:
+            try:
+                creator_id = int(creator_id)
+                queryset = queryset.filter(owner_id=creator_id)
+            except (ValueError, TypeError):
+                pass
+
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        """Override list to handle validation errors."""
+        try:
+            return super().list(request, *args, **kwargs)
+        except Exception as e:
+            from rest_framework.exceptions import ValidationError
+            if isinstance(e, ValidationError):
+                return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+            raise
 
     def perform_create(self, serializer):
         """Perform object creation."""
