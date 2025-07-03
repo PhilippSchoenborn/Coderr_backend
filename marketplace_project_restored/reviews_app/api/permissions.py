@@ -20,7 +20,7 @@ class IsAuthorOrReadOnly(permissions.BasePermission):
 class IsCustomerUser(permissions.BasePermission):
     """
     Custom permission to only allow customer users to create reviews.
-    Returns 401 for business users as if they were not authenticated.
+    Returns 403 for business users (they are authenticated but not authorized).
     """
 
     def has_permission(self, request, view):
@@ -28,11 +28,9 @@ class IsCustomerUser(permissions.BasePermission):
         if not request.user or not request.user.is_authenticated:
             return False
 
-        # For business users, act as if they're not authenticated (401)
+        # For business users, return False to trigger 403 (Permission Denied)
         if hasattr(request.user, 'profile') and request.user.profile.type == 'business':
-            # Raise authentication error instead of permission error
-            from rest_framework.exceptions import NotAuthenticated
-            raise NotAuthenticated("Authentication credentials were not provided.")
+            return False
 
         # Only customer users can create reviews
         return hasattr(

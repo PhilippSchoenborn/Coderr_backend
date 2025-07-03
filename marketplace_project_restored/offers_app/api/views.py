@@ -5,6 +5,7 @@ from rest_framework.generics import (
     ListCreateAPIView, RetrieveUpdateDestroyAPIView,
     RetrieveAPIView, ListAPIView
 )
+from django.http import Http404
 from rest_framework.pagination import PageNumberPagination
 from django.db.models import Q, Min
 from ..models import Offer, OfferDetail
@@ -200,6 +201,7 @@ class OfferListCreateView(ListCreateAPIView):
     List all offers or create a new offer.
     """
     queryset = Offer.objects.all().select_related('owner').prefetch_related('offer_details')
+    pagination_class = CustomPageNumberPagination  # Fix: Add pagination
 
     def get_serializer_class(self):
         """Return appropriate serializer class."""
@@ -418,6 +420,27 @@ class OfferDetailView(RetrieveUpdateDestroyAPIView):
         # Return full offer with details
         response_serializer = OfferSerializer(offer, context={'request': request})
         return Response(response_serializer.data)
+
+    def get_object(self):
+        """
+        Override to ensure DELETE returns 403 (not 404) when customer tries to delete existing offer.
+        """
+        # For DELETE requests, check permissions first
+        if self.request.method == 'DELETE':
+            # Get object normally - this might raise 404
+            try:
+                obj = super().get_object()
+            except Http404:
+                # If object doesn't exist, still return 404
+                raise
+            
+            # Object exists - now check permissions
+            # This will raise PermissionDenied (403) if user can't delete
+            self.check_object_permissions(self.request, obj)
+            return obj
+        
+        # For all other methods, use default behavior
+        return super().get_object()
 
 
 class OfferDetailDetailView(RetrieveAPIView):
