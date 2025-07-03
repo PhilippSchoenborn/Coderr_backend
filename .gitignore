@@ -85,6 +85,8 @@ coverage.xml
 .hypothesis/
 .tox/
 .nox/
+marketplace_project_restored/
+ABGABE_DOKUMENTATION/
 
 # Test Files and Directories - INTENTIONALLY EXCLUDED
 tests/
