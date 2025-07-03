@@ -104,7 +104,7 @@ class PublicOfferListView(ListAPIView):
                 max_delivery_time = int(max_delivery_time)
                 print(f"DEBUG: Converted to int: {max_delivery_time}")
                 if max_delivery_time <= 0:
-            raise ValidationError(
+                    raise ValidationError(
                         {"max_delivery_time": "Delivery time must be a positive integer."}
                     )
             except (ValueError, TypeError) as e:
@@ -263,7 +263,7 @@ class OfferListCreateView(ListCreateAPIView):
                 max_delivery_time = int(max_delivery_time)
                 print(f"DEBUG: Converted to int: {max_delivery_time}")
                 if max_delivery_time <= 0:
-            raise ValidationError(
+                    raise ValidationError(
                         {"max_delivery_time": "Delivery time must be a positive integer."}
                     )
             except (ValueError, TypeError) as e:
@@ -367,9 +367,14 @@ class OfferListCreateView(ListCreateAPIView):
 
     def create(self, request, *args, **kwargs):
         """Override create to return full offer data."""
-        # Check permissions first (401/403 before 400)
+        # Step 1: Check Authentication (401) first
+        if not request.user or not request.user.is_authenticated:
+            raise NotAuthenticated()
+        
+        # Step 2: Check Permissions (403) before validation
         self.check_permissions(request)
         
+        # Step 3: Validate data (400) after authentication and permissions
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
@@ -396,8 +401,8 @@ class OfferDetailView(RetrieveUpdateDestroyAPIView):
             # Only owners can modify/delete offers, but we need to check business type first
             return [IsAuthenticated(), IsBusinessUser(), IsOwnerOnly()]
         else:
-            # Anyone (including customers) can view offers - NO AUTHENTICATION REQUIRED
-            return [AllowAny()]
+            # GET requests also require authentication according to documentation
+            return [IsAuthenticated()]
 
     def get_serializer_class(self):
         """Return appropriate serializer class."""
@@ -407,11 +412,18 @@ class OfferDetailView(RetrieveUpdateDestroyAPIView):
 
     def update(self, request, *args, **kwargs):
         """Update the object."""
-        # Check permissions first (401/403 before 400/404)
+        # Step 1: Check Authentication (401) first
+        if not request.user or not request.user.is_authenticated:
+            raise NotAuthenticated()
+        
+        # Step 2: Check general permissions (403) before object retrieval and validation
         self.check_permissions(request)
         
+        # Step 3: Get object (404 if not found)
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
+        
+        # Step 4: Validate data (400) after authentication, permissions, and object existence
         serializer = self.get_serializer(
             instance, data=request.data, partial=partial
         )
@@ -424,10 +436,17 @@ class OfferDetailView(RetrieveUpdateDestroyAPIView):
 
     def destroy(self, request, *args, **kwargs):
         """Delete the object."""
-        # Check permissions first (401/403 before 404)
+        # Step 1: Check Authentication (401) first
+        if not request.user or not request.user.is_authenticated:
+            raise NotAuthenticated()
+        
+        # Step 2: Check general permissions (403) before object retrieval
         self.check_permissions(request)
         
+        # Step 3: Get object (404 if not found)
         instance = self.get_object()
+        
+        # Step 4: Delete object
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -435,15 +454,12 @@ class OfferDetailView(RetrieveUpdateDestroyAPIView):
         """
         Override to ensure correct HTTP status code order: 401 -> 403 -> 404
         """
-        # Step 1: Check Authentication (401) first for protected methods
+        # Step 1: Check Authentication (401) first for ALL methods (including GET)
+        if not self.request.user or not self.request.user.is_authenticated:
+            raise NotAuthenticated()
+        
+        # Step 2: Check general permissions (403) before object retrieval for protected methods
         if self.request.method in ['PUT', 'PATCH', 'DELETE']:
-            # Check if user is authenticated
-            if not self.request.user or not self.request.user.is_authenticated:
-                raise NotAuthenticated()
-            
-            # Step 2: Check general permissions (403) before object retrieval
-            # This ensures that if user doesn't have permission to modify ANY offer,
-            # we return 403 before checking if the specific offer exists
             for permission in self.get_permissions():
                 if not permission.has_permission(self.request, self):
                     raise PermissionDenied()
@@ -454,30 +470,11 @@ class OfferDetailView(RetrieveUpdateDestroyAPIView):
         except Http404:
             raise Http404()
         
-        # Step 4: Check Object Permissions (403) for specific object
+        # Step 4: Check Object Permissions (403) for specific object on protected methods
         if self.request.method in ['PUT', 'PATCH', 'DELETE']:
             self.check_object_permissions(self.request, obj)
         
         return obj
-        """
-        Override to ensure DELETE returns 403 (not 404) when customer tries to delete existing offer.
-        """
-        # For DELETE requests, check permissions first
-        if self.request.method == 'DELETE':
-            # Get object normally - this might raise 404
-            try:
-                obj = super().get_object()
-            except Http404:
-                # If object doesn't exist, still return 404
-                raise
-            
-            # Object exists - now check permissions
-            # This will raise PermissionDenied (403) if user can't delete
-            self.check_object_permissions(self.request, obj)
-            return obj
-        
-        # For all other methods, use default behavior
-        return super().get_object()
 
 
 class OfferDetailDetailView(RetrieveAPIView):
@@ -486,7 +483,18 @@ class OfferDetailDetailView(RetrieveAPIView):
     """
     queryset = OfferDetail.objects.all()
     serializer_class = OfferDetailSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        """
+        Override to ensure correct HTTP status code order: 401 -> 404
+        """
+        # Check Authentication (401) first
+        if not self.request.user or not self.request.user.is_authenticated:
+            raise NotAuthenticated()
+        
+        # Get object (404 if not found)
+        return super().get_object()
 
 
 class MyOffersView(ListAPIView):
