@@ -109,7 +109,7 @@ class PublicOfferListView(ListAPIView):
                     )
             except (ValueError, TypeError) as e:
                 print(f"DEBUG: ValueError/TypeError: {e}")
-            raise ValidationError(
+                raise ValidationError(
                     {"max_delivery_time": "Invalid delivery time. Must be a positive integer."}
                 )
 
@@ -268,7 +268,7 @@ class OfferListCreateView(ListCreateAPIView):
                     )
             except (ValueError, TypeError) as e:
                 print(f"DEBUG: ValueError/TypeError: {e}")
-            raise ValidationError(
+                raise ValidationError(
                     {"max_delivery_time": "Invalid delivery time. Must be a positive integer."}
                 )
 
@@ -416,14 +416,20 @@ class OfferDetailView(RetrieveUpdateDestroyAPIView):
         if not request.user or not request.user.is_authenticated:
             raise NotAuthenticated()
         
-        # Step 2: Check general permissions (403) before object retrieval and validation
+        # Step 2: Check general permissions (403) before validation and object retrieval
         self.check_permissions(request)
         
-        # Step 3: Get object (404 if not found)
+        # Step 3: Validate data format (400) before object existence check
         partial = kwargs.pop('partial', False)
+        # Pre-validate the data format without instance
+        serializer_class = self.get_serializer_class()
+        serializer = serializer_class(data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        
+        # Step 4: Get object (404 if not found) - after validation
         instance = self.get_object()
         
-        # Step 4: Validate data (400) after authentication, permissions, and object existence
+        # Step 5: Final validation with instance
         serializer = self.get_serializer(
             instance, data=request.data, partial=partial
         )
