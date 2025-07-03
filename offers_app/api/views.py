@@ -5,6 +5,7 @@ from rest_framework.generics import (
     ListCreateAPIView, RetrieveUpdateDestroyAPIView,
     RetrieveAPIView, ListAPIView
 )
+from rest_framework.exceptions import NotAuthenticated, PermissionDenied, ValidationError
 from django.http import Http404
 from rest_framework.pagination import PageNumberPagination
 from django.db.models import Q, Min
@@ -49,7 +50,6 @@ class PublicOfferListView(ListAPIView):
         try:
             return super().list(request, *args, **kwargs)
         except Exception as e:
-            from rest_framework.exceptions import ValidationError
             if isinstance(e, ValidationError):
                 return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
             raise
@@ -104,14 +104,12 @@ class PublicOfferListView(ListAPIView):
                 max_delivery_time = int(max_delivery_time)
                 print(f"DEBUG: Converted to int: {max_delivery_time}")
                 if max_delivery_time <= 0:
-                    from rest_framework.exceptions import ValidationError
-                    raise ValidationError(
+            raise ValidationError(
                         {"max_delivery_time": "Delivery time must be a positive integer."}
                     )
             except (ValueError, TypeError) as e:
                 print(f"DEBUG: ValueError/TypeError: {e}")
-                from rest_framework.exceptions import ValidationError
-                raise ValidationError(
+            raise ValidationError(
                     {"max_delivery_time": "Invalid delivery time. Must be a positive integer."}
                 )
 
@@ -265,14 +263,12 @@ class OfferListCreateView(ListCreateAPIView):
                 max_delivery_time = int(max_delivery_time)
                 print(f"DEBUG: Converted to int: {max_delivery_time}")
                 if max_delivery_time <= 0:
-                    from rest_framework.exceptions import ValidationError
-                    raise ValidationError(
+            raise ValidationError(
                         {"max_delivery_time": "Delivery time must be a positive integer."}
                     )
             except (ValueError, TypeError) as e:
                 print(f"DEBUG: ValueError/TypeError: {e}")
-                from rest_framework.exceptions import ValidationError
-                raise ValidationError(
+            raise ValidationError(
                     {"max_delivery_time": "Invalid delivery time. Must be a positive integer."}
                 )
 
@@ -361,7 +357,6 @@ class OfferListCreateView(ListCreateAPIView):
         try:
             return super().list(request, *args, **kwargs)
         except Exception as e:
-            from rest_framework.exceptions import ValidationError
             if isinstance(e, ValidationError):
                 return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
             raise
@@ -372,6 +367,9 @@ class OfferListCreateView(ListCreateAPIView):
 
     def create(self, request, *args, **kwargs):
         """Override create to return full offer data."""
+        # Check permissions first (401/403 before 400)
+        self.check_permissions(request)
+        
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
@@ -395,8 +393,8 @@ class OfferDetailView(RetrieveUpdateDestroyAPIView):
     def get_permissions(self):
         """Return appropriate permissions."""
         if self.request.method in ['PUT', 'PATCH', 'DELETE']:
-            # Only owners can modify/delete offers
-            return [IsAuthenticated(), IsOwnerOnly()]
+            # Only owners can modify/delete offers, but we need to check business type first
+            return [IsAuthenticated(), IsBusinessUser(), IsOwnerOnly()]
         else:
             # Anyone (including customers) can view offers - NO AUTHENTICATION REQUIRED
             return [AllowAny()]
@@ -409,6 +407,9 @@ class OfferDetailView(RetrieveUpdateDestroyAPIView):
 
     def update(self, request, *args, **kwargs):
         """Update the object."""
+        # Check permissions first (401/403 before 400/404)
+        self.check_permissions(request)
+        
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
         serializer = self.get_serializer(
@@ -421,7 +422,43 @@ class OfferDetailView(RetrieveUpdateDestroyAPIView):
         response_serializer = OfferSerializer(offer, context={'request': request})
         return Response(response_serializer.data)
 
+    def destroy(self, request, *args, **kwargs):
+        """Delete the object."""
+        # Check permissions first (401/403 before 404)
+        self.check_permissions(request)
+        
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
     def get_object(self):
+        """
+        Override to ensure correct HTTP status code order: 401 -> 403 -> 404
+        """
+        # Step 1: Check Authentication (401) first for protected methods
+        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
+            # Check if user is authenticated
+            if not self.request.user or not self.request.user.is_authenticated:
+                raise NotAuthenticated()
+            
+            # Step 2: Check general permissions (403) before object retrieval
+            # This ensures that if user doesn't have permission to modify ANY offer,
+            # we return 403 before checking if the specific offer exists
+            for permission in self.get_permissions():
+                if not permission.has_permission(self.request, self):
+                    raise PermissionDenied()
+        
+        # Step 3: Get object (404 if not found)
+        try:
+            obj = super().get_object()
+        except Http404:
+            raise Http404()
+        
+        # Step 4: Check Object Permissions (403) for specific object
+        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
+            self.check_object_permissions(self.request, obj)
+        
+        return obj
         """
         Override to ensure DELETE returns 403 (not 404) when customer tries to delete existing offer.
         """
